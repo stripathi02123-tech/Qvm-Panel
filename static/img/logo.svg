@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <!-- Main gradient: blue → purple -->
+    <linearGradient id="g-main" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"   stop-color="#4f9af5"/>
+      <stop offset="50%"  stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#a78bfa"/>
+    </linearGradient>
+    <!-- Glow gradient for inner ring -->
+    <linearGradient id="g-ring" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"   stop-color="#93c5fd" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#c4b5fd" stop-opacity="0.3"/>
+    </linearGradient>
+    <!-- Radial glow behind hex -->
+    <radialGradient id="g-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#4f9af5" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#4f9af5" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Drop shadow filter -->
+    <filter id="f-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="0" stdDeviation="8" flood-color="#4f9af5" flood-opacity="0.45"/>
+    </filter>
+    <filter id="f-glow-text" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#93c5fd" flood-opacity="0.6"/>
+    </filter>
+  </defs>
+
+  <!-- Outer glow circle -->
+  <circle cx="100" cy="100" r="90" fill="url(#g-glow)"/>
+
+  <!-- Hexagon background fill -->
+  <polygon
+    points="100,14 172,57 172,143 100,186 28,143 28,57"
+    fill="url(#g-main)"
+    opacity="0.12"
+    filter="url(#f-shadow)"
+  />
+
+  <!-- Hexagon outer border -->
+  <polygon
+    points="100,14 172,57 172,143 100,186 28,143 28,57"
+    fill="none"
+    stroke="url(#g-main)"
+    stroke-width="3"
+    filter="url(#f-shadow)"
+  />
+
+  <!-- Hexagon inner ring -->
+  <polygon
+    points="100,28 160,63 160,137 100,172 40,137 40,63"
+    fill="none"
+    stroke="url(#g-ring)"
+    stroke-width="1.2"
+    stroke-dasharray="6 4"
+  />
+
+  <!-- Letter A — main stroke -->
+  <path
+    d="M68 148 L100 60 L132 148"
+    fill="none"
+    stroke="url(#g-main)"
+    stroke-width="10"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    filter="url(#f-glow-text)"
+  />
+  <!-- Letter A — crossbar -->
+  <line
+    x1="79" y1="118"
+    x2="121" y2="118"
+    stroke="url(#g-main)"
+    stroke-width="8"
+    stroke-linecap="round"
+    filter="url(#f-glow-text)"
+  />
+
+  <!-- Top apex dot -->
+  <circle cx="100" cy="60" r="5" fill="#93c5fd" filter="url(#f-glow-text)"/>
+
+  <!-- Corner accent dots -->
+  <circle cx="100" cy="14"  r="3" fill="#4f9af5" opacity="0.7"/>
+  <circle cx="172" cy="57"  r="3" fill="#6366f1" opacity="0.7"/>
+  <circle cx="172" cy="143" r="3" fill="#a78bfa" opacity="0.7"/>
+  <circle cx="100" cy="186" r="3" fill="#4f9af5" opacity="0.7"/>
+  <circle cx="28"  cy="143" r="3" fill="#6366f1" opacity="0.7"/>
+  <circle cx="28"  cy="57"  r="3" fill="#a78bfa" opacity="0.7"/>
+</svg>

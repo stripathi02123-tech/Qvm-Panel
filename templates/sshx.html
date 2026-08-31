@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ panel_name }} — SSHX: {{ vps.hostname or vps.container_name }}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --bg: #0c1018; --bg2: #111722; --bg3: #1a2030;
+            --text: #e1e9f0; --muted: #6b7b8d;
+            --green: #10b981; --blue: #3b82f6; --orange: #f59e0b; --red: #ef4444;
+            --border: #1e2a3a;
+        }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'JetBrains Mono', monospace;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+        .container {
+            max-width: 600px;
+            width: 100%;
+        }
+        .card {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+        }
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .card-header .icon {
+            width: 48px; height: 48px;
+            background: linear-gradient(135deg, var(--green), #059669);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            color: #fff;
+        }
+        .card-header h1 {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+        .card-header .subtitle {
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+        .info-item {
+            background: var(--bg3);
+            padding: 0.75rem;
+            border-radius: 8px;
+        }
+        .info-item .label {
+            font-size: 0.7rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.25rem;
+        }
+        .info-item .value {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        /* ── Status Area ── */
+        .status-area {
+            text-align: center;
+            padding: 2rem;
+            border-radius: 12px;
+            border: 2px dashed var(--border);
+            margin-bottom: 1.5rem;
+        }
+        .status-area.ready {
+            border-color: var(--green);
+            background: rgba(16, 185, 129, 0.05);
+        }
+        .status-area.error {
+            border-color: var(--red);
+            background: rgba(239, 68, 68, 0.05);
+        }
+        .status-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: var(--muted);
+        }
+        .status-area.ready .status-icon { color: var(--green); }
+        .status-area.error .status-icon { color: var(--red); }
+        .status-text {
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        .status-sub {
+            font-size: 0.8rem;
+            color: var(--muted);
+        }
+
+        /* ── Share URL ── */
+        .share-url-box {
+            display: none;
+            background: var(--bg3);
+            border: 1px solid var(--green);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .share-url-box.visible { display: block; }
+        .share-url-box .label {
+            font-size: 0.7rem;
+            color: var(--green);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.5rem;
+        }
+        .share-url-box .url-row {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .share-url-box input {
+            flex: 1;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--green);
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 0.85rem;
+            outline: none;
+        }
+        .share-url-box button {
+            background: var(--green);
+            color: #fff;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: 600;
+            transition: opacity 0.2s;
+        }
+        .share-url-box button:hover { opacity: 0.85; }
+
+        /* ── Buttons ── */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+        .btn-primary {
+            background: var(--green);
+            color: #fff;
+        }
+        .btn-primary:hover { opacity: 0.85; }
+        .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text);
+        }
+        .btn-outline:hover { border-color: var(--green); }
+        .btn-center { display: flex; justify-content: center; gap: 1rem; }
+
+        /* ── Steps ── */
+        .steps {
+            margin-bottom: 1.5rem;
+        }
+        .step {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: var(--bg3);
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+        }
+        .step .num {
+            width: 24px; height: 24px;
+            background: var(--border);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+        .step.done .num { background: var(--green); color: #fff; }
+        .step.active .num { background: var(--blue); color: #fff; animation: pulse 1s infinite; }
+        .step.error .num { background: var(--red); color: #fff; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* ── How It Works ── */
+        .how-it-works {
+            background: var(--bg3);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+        .how-it-works h3 {
+            font-size: 0.85rem;
+            margin-bottom: 0.75rem;
+            color: var(--muted);
+        }
+        .how-it-works p {
+            font-size: 0.8rem;
+            line-height: 1.6;
+            color: var(--muted);
+        }
+        .how-it-works code {
+            background: var(--bg);
+            padding: 0.1rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.75rem;
+            color: var(--green);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <div class="icon"><i class="fas fa-share-nodes"></i></div>
+                <div>
+                    <h1>SSHX Share</h1>
+                    <div class="subtitle">Web-based SSH sharing for {{ vps.hostname or vps.container_name }}</div>
+                </div>
+            </div>
+
+            <!-- VPS Info -->
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="label">Container</div>
+                    <div class="value">{{ vps.container_name }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">Node</div>
+                    <div class="value">{{ node.name if node else 'Unknown' }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">IP Address</div>
+                    <div class="value">{{ vps.ip_address or 'DHCP' }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">Status</div>
+                    <div class="value" style="color: var(--green);">{{ vps.status }}</div>
+                </div>
+            </div>
+
+            <!-- Status -->
+            <div class="status-area" id="statusArea">
+                <div class="status-icon" id="statusIcon"><i class="fas fa-link"></i></div>
+                <div class="status-text" id="statusText">Ready to share</div>
+                <div class="status-sub" id="statusSub">Click "Install & Start SSHX" to generate a shareable link</div>
+            </div>
+
+            <!-- Steps -->
+            <div class="steps" id="stepsArea">
+                <div class="step" id="step1">
+                    <div class="num">1</div>
+                    <span>Install sshx in container</span>
+                </div>
+                <div class="step" id="step2">
+                    <div class="num">2</div>
+                    <span>Start sshx session</span>
+                </div>
+                <div class="step" id="step3">
+                    <div class="num">3</div>
+                    <span>Get shareable link</span>
+                </div>
+            </div>
+
+            <!-- Share URL -->
+            <div class="share-url-box" id="shareUrlBox">
+                <div class="label">🔗 Share this link</div>
+                <div class="url-row">
+                    <input type="text" id="shareUrl" readonly>
+                    <button onclick="copyUrl()"><i class="fas fa-copy"></i> Copy</button>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="btn-center">
+                <button class="btn btn-primary" id="startBtn" onclick="startSSHX()">
+                    <i class="fas fa-play"></i> Install & Start SSHX
+                </button>
+                <button class="btn btn-outline" id="refreshBtn" onclick="checkStatus()" style="display:none;">
+                    <i class="fas fa-sync"></i> Refresh
+                </button>
+                <a href="{{ url_for('vps_detail', vps_id=vps.id) }}" class="btn btn-outline">
+                    <i class="fas fa-arrow-left"></i> Back
+                </a>
+            </div>
+
+            <div class="how-it-works">
+                <h3><i class="fas fa-info-circle"></i> How it works</h3>
+                <p>
+                    SSHX creates a secure, end-to-end encrypted SSH session accessible via web browser.
+                    After installation, you'll get a unique <code>https://sshx.io/s/...</code> link that anyone can open
+                    to get shell access. The session runs inside your container and can be revoked anytime.
+                    <br><br>
+                    <strong>Security tip:</strong> Only share the link with trusted people. Anyone with the link can access the terminal.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const vpsId = '{{ vps.id }}';
+        let polling = null;
+
+        async function startSSHX() {
+            const btn = document.getElementById('startBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Installing...';
+
+            setStep(1, 'active');
+            setStatus('installing', 'Installing sshx...', 'This may take a moment on first run');
+
+            try {
+                const resp = await fetch('/vps/' + vpsId + '/sshx/install', { method: 'POST' });
+                const data = await resp.json();
+
+                if (data.success) {
+                    setStep(1, 'done');
+                    setStep(2, 'done');
+
+                    if (data.url) {
+                        setStep(3, 'done');
+                        showUrl(data.url);
+                        setStatus('ready', 'SSHX session is live!', 'Share the link above to grant access');
+                    } else {
+                        setStep(2, 'active');
+                        setStatus('installing', 'Waiting for sshx URL...', 'Polling for session link');
+                        startPolling();
+                    }
+                } else {
+                    setStep(1, 'error');
+                    setStatus('error', 'Installation failed', data.error || 'Unknown error');
+                }
+            } catch (e) {
+                setStep(1, 'error');
+                setStatus('error', 'Connection error', e.message);
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-play"></i> Install & Start SSHX';
+        }
+
+        function startPolling() {
+            if (polling) clearInterval(polling);
+            polling = setInterval(async () => {
+                try {
+                    const resp = await fetch('/vps/' + vpsId + '/sshx/status');
+                    const data = await resp.json();
+                    if (data.success && data.url) {
+                        clearInterval(polling);
+                        setStep(2, 'done');
+                        setStep(3, 'done');
+                        showUrl(data.url);
+                        setStatus('ready', 'SSHX session is live!', 'Share the link above to grant access');
+                    }
+                } catch (e) { /* keep polling */ }
+            }, 3000);
+
+            // Stop polling after 60s
+            setTimeout(() => { if (polling) clearInterval(polling); }, 60000);
+        }
+
+        async function checkStatus() {
+            try {
+                const resp = await fetch('/vps/' + vpsId + '/sshx/status');
+                const data = await resp.json();
+                if (data.success && data.url) {
+                    showUrl(data.url);
+                    setStatus('ready', 'SSHX session is live!', 'Share the link above to grant access');
+                } else {
+                    setStatus('info', 'No active session', 'Click "Install & Start SSHX" to begin');
+                }
+            } catch (e) {
+                setStatus('error', 'Could not check status', e.message);
+            }
+        }
+
+        function showUrl(url) {
+            document.getElementById('shareUrl').value = url;
+            document.getElementById('shareUrlBox').classList.add('visible');
+            document.getElementById('refreshBtn').style.display = 'inline-flex';
+        }
+
+        function copyUrl() {
+            const input = document.getElementById('shareUrl');
+            navigator.clipboard.writeText(input.value).then(() => {
+                const btn = input.nextElementSibling;
+                btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                setTimeout(() => btn.innerHTML = '<i class="fas fa-copy"></i> Copy', 2000);
+            });
+        }
+
+        function setStatus(type, text, sub) {
+            const area = document.getElementById('statusArea');
+            const icon = document.getElementById('statusIcon');
+            area.className = 'status-area ' + (type === 'ready' ? 'ready' : type === 'error' ? 'error' : '');
+            icon.innerHTML = type === 'ready' ? '<i class="fas fa-check-circle"></i>' :
+                           type === 'error' ? '<i class="fas fa-times-circle"></i>' :
+                           type === 'installing' ? '<i class="fas fa-spinner fa-spin"></i>' :
+                           '<i class="fas fa-link"></i>';
+            document.getElementById('statusText').textContent = text;
+            document.getElementById('statusSub').textContent = sub;
+        }
+
+        function setStep(num, state) {
+            const step = document.getElementById('step' + num);
+            if (step) {
+                step.className = 'step ' + state;
+                if (state === 'done') {
+                    step.querySelector('.num').innerHTML = '<i class="fas fa-check"></i>';
+                } else if (state === 'error') {
+                    step.querySelector('.num').innerHTML = '<i class="fas fa-times"></i>';
+                } else {
+                    step.querySelector('.num').textContent = num;
+                }
+            }
+        }
+    </script>
+</body>
+</html>

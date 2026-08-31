@@ -1,0 +1,1317 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - {{ panel_name }}{% endblock %}
+{% block header_title %}Dashboard{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumb">
+    <a href="{{ url_for('dashboard') }}" class="breadcrumb-item">Home</a>
+    <span class="breadcrumb-separator"><i class="fas fa-chevron-right"></i></span>
+    <span class="breadcrumb-item active">Dashboard</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<style>
+/* ══════════════════════════════════════════════
+   CYBER DASHBOARD — NEON FORGE THEME
+   A completely unique aesthetic: dark void bg,
+   electric neon accents, holographic cards,
+   laser-grid overlay, plasma glow effects
+══════════════════════════════════════════════ */
+
+/* Import futuristic font */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  --neon-cyan:   #00f5ff;
+  --neon-purple: #bf00ff;
+  --neon-green:  #00ff88;
+  --neon-orange: #ff6b00;
+  --neon-pink:   #ff0080;
+  --void-bg:     #030510;
+  --card-bg:     rgba(5, 8, 24, 0.85);
+  --border-glow: rgba(0, 245, 255, 0.15);
+  --text-primary: #e8f4ff;
+  --text-dim:    rgba(160, 200, 255, 0.55);
+}
+
+/* ── LASER GRID BACKGROUND ── */
+.db-grid-bg {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    linear-gradient(rgba(0,245,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,245,255,0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
+  animation: gridPulse 8s ease-in-out infinite;
+}
+@keyframes gridPulse {
+  0%,100%{opacity:0.4} 50%{opacity:0.8}
+}
+
+/* ── PLASMA ORB (ambient glow blob) ── */
+.db-orb {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(100px);
+  pointer-events: none;
+  z-index: 0;
+  animation: orbFloat 12s ease-in-out infinite;
+}
+.db-orb-1 {
+  width: 600px; height: 600px;
+  top: -200px; left: -150px;
+  background: radial-gradient(circle, rgba(0,245,255,0.07) 0%, transparent 70%);
+  animation-duration: 14s;
+}
+.db-orb-2 {
+  width: 500px; height: 500px;
+  bottom: -150px; right: -100px;
+  background: radial-gradient(circle, rgba(191,0,255,0.07) 0%, transparent 70%);
+  animation-duration: 10s;
+  animation-delay: -5s;
+}
+.db-orb-3 {
+  width: 400px; height: 400px;
+  top: 40%; left: 60%;
+  background: radial-gradient(circle, rgba(0,255,136,0.04) 0%, transparent 70%);
+  animation-duration: 16s;
+  animation-delay: -8s;
+}
+@keyframes orbFloat {
+  0%,100%{transform:translate(0,0) scale(1);}
+  33%{transform:translate(30px,-20px) scale(1.05);}
+  66%{transform:translate(-20px,25px) scale(0.95);}
+}
+
+/* ── SCANLINE OVERLAY ── */
+.db-scanlines {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.03) 2px,
+    rgba(0,0,0,0.03) 4px
+  );
+  opacity: 0.4;
+}
+
+/* ── GLOBAL ANIMATIONS ── */
+@keyframes fadeSlideUp {
+  from { opacity:0; transform:translateY(32px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+@keyframes neonFlicker {
+  0%,19%,21%,23%,25%,54%,56%,100% { opacity:1; }
+  20%,22%,24%,55% { opacity:0.6; }
+}
+@keyframes rotateBorder {
+  0%   { transform:rotate(0deg); }
+  100% { transform:rotate(360deg); }
+}
+@keyframes shimmerX {
+  0%   { transform:translateX(-200%); }
+  100% { transform:translateX(200%); }
+}
+@keyframes pulseDot {
+  0%,100% { transform:scale(1); opacity:1; box-shadow:0 0 6px currentColor; }
+  50%     { transform:scale(1.5); opacity:0.8; box-shadow:0 0 12px currentColor; }
+}
+@keyframes countUp {
+  from { opacity:0; transform:translateY(10px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+@keyframes laserSweep {
+  0%   { top:-2px; opacity:0; }
+  5%   { opacity:1; }
+  95%  { opacity:0.5; }
+  100% { top:100%; opacity:0; }
+}
+@keyframes glowBreath {
+  0%,100% { box-shadow: 0 0 20px var(--glow-color, rgba(0,245,255,0.2)); }
+  50%     { box-shadow: 0 0 40px var(--glow-color, rgba(0,245,255,0.4)), 0 0 80px var(--glow-color, rgba(0,245,255,0.1)); }
+}
+@keyframes orbitLine {
+  0%   { transform: rotate(0deg) translateX(0); }
+  100% { transform: rotate(360deg) translateX(0); }
+}
+@keyframes typeIn {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0 0% 0 0); }
+}
+
+/* ── DASHBOARD WRAPPER ── */
+.db-wrap {
+  position: relative;
+  z-index: 2;
+}
+
+/* ══════════════════════════════════════════
+   HERO SECTION — COMMAND CENTER
+══════════════════════════════════════════ */
+.cyber-hero {
+  position: relative;
+  overflow: hidden;
+  background: var(--card-bg);
+  border: 1px solid rgba(0,245,255,0.12);
+  border-radius: 24px;
+  padding: 2.5rem 2.5rem 2rem;
+  margin-bottom: 2rem;
+  backdrop-filter: blur(24px);
+  animation: fadeSlideUp 0.6s cubic-bezier(0.16,1,0.3,1) both;
+}
+/* Rotating border accent */
+.cyber-hero::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 26px;
+  padding: 2px;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgba(0,245,255,0.5) 60deg,
+    transparent 120deg,
+    rgba(191,0,255,0.4) 180deg,
+    transparent 240deg,
+    rgba(0,255,136,0.3) 300deg,
+    transparent 360deg
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: rotateBorder 8s linear infinite;
+  pointer-events: none;
+}
+/* Laser sweep */
+.hero-laser {
+  position: absolute;
+  left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--neon-cyan), rgba(191,0,255,0.6), transparent);
+  animation: laserSweep 6s ease-in-out infinite;
+  pointer-events: none;
+}
+/* Corner HUD markers */
+.hud-corner {
+  position: absolute;
+  width: 18px; height: 18px;
+  pointer-events: none;
+}
+.hud-tl { top:12px; left:12px; border-top:2px solid var(--neon-cyan); border-left:2px solid var(--neon-cyan); border-radius:4px 0 0 0; }
+.hud-tr { top:12px; right:12px; border-top:2px solid var(--neon-purple); border-right:2px solid var(--neon-purple); border-radius:0 4px 0 0; }
+.hud-bl { bottom:12px; left:12px; border-bottom:2px solid var(--neon-green); border-left:2px solid var(--neon-green); border-radius:0 0 0 4px; }
+.hud-br { bottom:12px; right:12px; border-bottom:2px solid rgba(255,107,0,0.6); border-right:2px solid rgba(255,107,0,0.6); border-radius:0 0 4px 0; }
+
+.hero-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 16px 4px 8px;
+  border-radius: 30px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border: 1px solid rgba(0,255,136,0.3);
+  background: rgba(0,255,136,0.06);
+  color: var(--neon-green);
+  margin-bottom: 1rem;
+  font-family: 'Orbitron', sans-serif;
+}
+.status-led {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--neon-green);
+  box-shadow: 0 0 10px var(--neon-green);
+  animation: pulseDot 1.8s ease-in-out infinite;
+}
+
+.hero-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 2rem;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+  margin-bottom: 0.6rem;
+  background: linear-gradient(135deg, #ffffff 0%, var(--neon-cyan) 40%, var(--neon-purple) 80%, var(--neon-green) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  background-size: 300% auto;
+  animation: gradShift 6s linear infinite;
+}
+@keyframes gradShift {
+  0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%}
+}
+.hero-sub {
+  font-size: 0.88rem;
+  color: var(--text-dim);
+  line-height: 1.7;
+  max-width: 420px;
+}
+
+/* Hero right panel — holographic metrics */
+.hero-holo-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 190px;
+}
+.holo-metric {
+  background: rgba(0,245,255,0.03);
+  border: 1px solid rgba(0,245,255,0.1);
+  border-radius: 14px;
+  padding: 0.9rem 1.2rem;
+  text-align: right;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+.holo-metric::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%; width: 50%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(0,245,255,0.04), transparent);
+  transition: transform 0.7s ease;
+}
+.holo-metric:hover { border-color: rgba(0,245,255,0.3); transform: translateY(-2px) scale(1.02); }
+.holo-metric:hover::before { transform: translateX(300%); }
+.hm-lbl { font-size: 0.68rem; font-weight: 700; color: rgba(0,245,255,0.5); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px; font-family:'Orbitron',sans-serif; }
+.hm-val { font-family: 'Orbitron', sans-serif; font-size: 1.5rem; font-weight: 900; color: #fff; }
+.hm-val .hm-unit { font-size: 0.65rem; font-weight: 500; color: rgba(0,245,255,0.5); }
+.hm-val.green { color: var(--neon-green); text-shadow: 0 0 12px rgba(0,255,136,0.5); }
+
+/* ══════════════════════════════════════════
+   QUICK NAV STRIP
+══════════════════════════════════════════ */
+.quick-nav-strip {
+  display: flex;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+  margin-bottom: 2rem;
+  animation: fadeSlideUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.15s both;
+}
+.qn-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.65rem 1.25rem;
+  border-radius: 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.28s cubic-bezier(0.34,1.56,0.64,1);
+  cursor: pointer;
+  border: none;
+  font-family: 'Inter', sans-serif;
+}
+.qn-btn::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%; width: 60%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  transition: transform 0.4s;
+}
+.qn-btn:hover::after { transform: translateX(300%); }
+.qn-btn:hover { transform: translateY(-3px) scale(1.04); }
+
+.qn-cyan {
+  background: linear-gradient(135deg, rgba(0,245,255,0.15), rgba(0,245,255,0.05));
+  border: 1px solid rgba(0,245,255,0.25);
+  color: var(--neon-cyan);
+  box-shadow: 0 4px 20px rgba(0,245,255,0.1);
+}
+.qn-cyan:hover { box-shadow: 0 8px 30px rgba(0,245,255,0.25); }
+
+.qn-purple {
+  background: linear-gradient(135deg, rgba(191,0,255,0.15), rgba(191,0,255,0.05));
+  border: 1px solid rgba(191,0,255,0.25);
+  color: #df88ff;
+  box-shadow: 0 4px 20px rgba(191,0,255,0.1);
+}
+.qn-purple:hover { box-shadow: 0 8px 30px rgba(191,0,255,0.25); }
+
+.qn-green {
+  background: linear-gradient(135deg, rgba(0,255,136,0.15), rgba(0,255,136,0.05));
+  border: 1px solid rgba(0,255,136,0.25);
+  color: var(--neon-green);
+  box-shadow: 0 4px 20px rgba(0,255,136,0.1);
+}
+.qn-green:hover { box-shadow: 0 8px 30px rgba(0,255,136,0.25); }
+
+.qn-orange {
+  background: linear-gradient(135deg, rgba(255,107,0,0.15), rgba(255,107,0,0.05));
+  border: 1px solid rgba(255,107,0,0.25);
+  color: #ff9a4d;
+  box-shadow: 0 4px 20px rgba(255,107,0,0.1);
+}
+.qn-orange:hover { box-shadow: 0 8px 30px rgba(255,107,0,0.25); }
+
+/* ══════════════════════════════════════════
+   HOLOGRAPHIC STAT CARDS
+══════════════════════════════════════════ */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+.holo-stat {
+  position: relative;
+  overflow: hidden;
+  background: var(--card-bg);
+  border-radius: 20px;
+  padding: 1.75rem 1.5rem 1.5rem;
+  backdrop-filter: blur(24px);
+  cursor: default;
+  transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.35s ease;
+  animation: fadeSlideUp 0.5s cubic-bezier(0.16,1,0.3,1) both;
+  --glow-color: rgba(0,245,255,0.2);
+}
+.holo-stat::before {
+  content: '';
+  position: absolute;
+  inset: 0; border-radius: 20px;
+  background: var(--card-grad, linear-gradient(135deg, rgba(0,245,255,0.04), transparent));
+  pointer-events: none;
+}
+/* Neon border via box-shadow */
+.holo-stat {
+  box-shadow:
+    inset 0 0 0 1px var(--hs-border, rgba(0,245,255,0.14)),
+    0 4px 24px rgba(0,0,0,0.5);
+}
+.holo-stat:hover {
+  transform: translateY(-8px) scale(1.02) rotateX(2deg);
+  box-shadow:
+    inset 0 0 0 1px var(--hs-border-h, rgba(0,245,255,0.4)),
+    0 24px 60px rgba(0,0,0,0.6),
+    0 0 40px var(--glow-color);
+}
+/* Top neon bar */
+.holo-stat::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 10%; width: 80%; height: 2px;
+  background: var(--hs-bar);
+  border-radius: 0 0 4px 4px;
+  box-shadow: var(--hs-bar-glow);
+}
+
+/* Card variants */
+.hs-cyan   { --card-grad:linear-gradient(135deg,rgba(0,245,255,0.06),transparent); --hs-border:rgba(0,245,255,0.14); --hs-border-h:rgba(0,245,255,0.45); --glow-color:rgba(0,245,255,0.18); --hs-bar:linear-gradient(90deg,transparent,#00f5ff,transparent); --hs-bar-glow:0 0 12px rgba(0,245,255,0.7); --icon-c:#00f5ff; --icon-bg:rgba(0,245,255,0.1); }
+.hs-green  { --card-grad:linear-gradient(135deg,rgba(0,255,136,0.06),transparent); --hs-border:rgba(0,255,136,0.14); --hs-border-h:rgba(0,255,136,0.45); --glow-color:rgba(0,255,136,0.18); --hs-bar:linear-gradient(90deg,transparent,#00ff88,transparent); --hs-bar-glow:0 0 12px rgba(0,255,136,0.7); --icon-c:#00ff88; --icon-bg:rgba(0,255,136,0.1); }
+.hs-purple { --card-grad:linear-gradient(135deg,rgba(191,0,255,0.06),transparent); --hs-border:rgba(191,0,255,0.14); --hs-border-h:rgba(191,0,255,0.45); --glow-color:rgba(191,0,255,0.18); --hs-bar:linear-gradient(90deg,transparent,#bf00ff,transparent); --hs-bar-glow:0 0 12px rgba(191,0,255,0.7); --icon-c:#df88ff; --icon-bg:rgba(191,0,255,0.1); }
+.hs-orange { --card-grad:linear-gradient(135deg,rgba(255,107,0,0.06),transparent); --hs-border:rgba(255,107,0,0.14); --hs-border-h:rgba(255,107,0,0.45); --glow-color:rgba(255,107,0,0.18); --hs-bar:linear-gradient(90deg,transparent,#ff6b00,transparent); --hs-bar-glow:0 0 12px rgba(255,107,0,0.7); --icon-c:#ff9a4d; --icon-bg:rgba(255,107,0,0.1); }
+
+/* Stagger delays */
+.holo-stat:nth-child(1){animation-delay:0.1s}
+.holo-stat:nth-child(2){animation-delay:0.18s}
+.holo-stat:nth-child(3){animation-delay:0.26s}
+.holo-stat:nth-child(4){animation-delay:0.34s}
+
+.hs-icon-wrap {
+  width: 52px; height: 52px;
+  border-radius: 14px;
+  background: var(--icon-bg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.35rem;
+  color: var(--icon-c);
+  margin-bottom: 1.25rem;
+  position: relative;
+  transition: transform 0.3s ease;
+}
+.holo-stat:hover .hs-icon-wrap { transform: scale(1.15) rotate(-8deg); }
+.hs-icon-wrap::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 15px;
+  border: 1px solid var(--icon-c);
+  opacity: 0.2;
+}
+
+.hs-value {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 2.6rem;
+  font-weight: 900;
+  color: #fff;
+  line-height: 1;
+  margin-bottom: 0.35rem;
+  animation: countUp 0.5s ease both;
+}
+.hs-value .hs-unit {
+  font-size: 1rem;
+  font-weight: 500;
+  color: rgba(200,220,255,0.4);
+  font-family: 'Inter', sans-serif;
+}
+.hs-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  margin-bottom: 1rem;
+  font-family: 'Orbitron', sans-serif;
+}
+
+/* Mini badge pills */
+.hs-pills { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.hs-pill {
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  border: 1px solid;
+}
+.pill-run  { background:rgba(0,255,136,0.08);  border-color:rgba(0,255,136,0.25);  color:#00ff88; }
+.pill-stop { background:rgba(100,130,180,0.08); border-color:rgba(100,130,180,0.2); color:#7fa0d0; }
+.pill-sus  { background:rgba(255,107,0,0.08);   border-color:rgba(255,107,0,0.25);  color:#ff9a4d; }
+.pill-all  { background:rgba(0,245,255,0.08);   border-color:rgba(0,245,255,0.25);  color:#00f5ff; }
+
+/* Shimmer sweep on stat */
+.holo-stat .hs-shimmer {
+  position: absolute;
+  top: 0; left: -100%; width: 60%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.025), transparent);
+  transition: transform 0.8s ease;
+  pointer-events: none;
+}
+.holo-stat:hover .hs-shimmer { transform: translateX(350%); }
+
+/* ══════════════════════════════════════════
+   THEME BANNER (Admin)
+══════════════════════════════════════════ */
+.cyber-theme-banner {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(191,0,255,0.06), rgba(255,0,128,0.04), transparent);
+  border: 1px solid rgba(191,0,255,0.2);
+  border-radius: 18px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 2rem;
+  backdrop-filter: blur(20px);
+  animation: fadeSlideUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.28s both;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  transition: all 0.3s ease;
+}
+.cyber-theme-banner:hover {
+  border-color: rgba(191,0,255,0.4);
+  box-shadow: 0 8px 40px rgba(191,0,255,0.12);
+}
+.cyber-theme-banner::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(191,0,255,0.6), rgba(255,0,128,0.4), transparent);
+}
+.ctb-icon {
+  width: 48px; height: 48px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(191,0,255,0.2), rgba(255,0,128,0.15));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.4rem;
+  box-shadow: 0 0 20px rgba(191,0,255,0.2);
+  flex-shrink: 0;
+}
+.ctb-info-title {
+  font-size: 0.95rem; font-weight: 700; color: #e8d8ff; margin-bottom: 3px;
+  font-family: 'Orbitron', sans-serif; letter-spacing: 0.03em;
+}
+.ctb-info-sub { font-size: 0.8rem; color: rgba(170,120,220,0.7); }
+
+/* ══════════════════════════════════════════
+   SECTION CARDS (charts, table, notifs)
+══════════════════════════════════════════ */
+.cyber-card {
+  background: var(--card-bg);
+  border: 1px solid rgba(0,245,255,0.08);
+  border-radius: 20px;
+  overflow: hidden;
+  backdrop-filter: blur(24px);
+  animation: fadeSlideUp 0.5s cubic-bezier(0.16,1,0.3,1) both;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 4px 32px rgba(0,0,0,0.5);
+}
+.cyber-card:hover {
+  border-color: rgba(0,245,255,0.2);
+  box-shadow: 0 8px 48px rgba(0,0,0,0.6), 0 0 30px rgba(0,245,255,0.04);
+}
+.cc-header {
+  padding: 1.2rem 1.5rem;
+  border-bottom: 1px solid rgba(0,245,255,0.07);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(0,245,255,0.015);
+  position: relative;
+  overflow: hidden;
+}
+.cc-header::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0,245,255,0.3), transparent);
+}
+.cc-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #b0d8ff;
+  letter-spacing: 0.06em;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  text-transform: uppercase;
+}
+.cc-title i { color: var(--neon-cyan); }
+.cc-body { padding: 1.5rem; }
+
+/* view-all link */
+.cc-view-all {
+  font-size: 0.78rem; font-weight: 600;
+  color: rgba(0,245,255,0.6);
+  text-decoration: none;
+  display: flex; align-items: center; gap: 5px;
+  padding: 5px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(0,245,255,0.15);
+  background: rgba(0,245,255,0.04);
+  transition: all 0.2s ease;
+  font-family: 'Orbitron', sans-serif;
+  letter-spacing: 0.05em;
+}
+.cc-view-all:hover { border-color: rgba(0,245,255,0.4); color: var(--neon-cyan); background: rgba(0,245,255,0.08); }
+
+/* ── CHARTS ── */
+.chart-wrap { height: 240px; position: relative; }
+.chart-legend {
+  display: flex; justify-content: center; gap: 1.5rem;
+  margin-top: 1rem; flex-wrap: wrap;
+}
+.cl-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.78rem; color: rgba(140,170,220,0.8); font-family:'Orbitron',sans-serif; letter-spacing:0.04em; }
+.cl-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+/* ── VPS TABLE ── */
+.cyber-table { width: 100%; border-collapse: collapse; }
+.cyber-table th {
+  padding: 0.85rem 1.25rem;
+  font-size: 0.68rem; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: rgba(0,245,255,0.45);
+  border-bottom: 1px solid rgba(0,245,255,0.08);
+  text-align: left;
+  font-family: 'Orbitron', sans-serif;
+}
+.cyber-table td {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid rgba(0,245,255,0.05);
+  font-size: 0.875rem; color: #b8d0f0;
+  vertical-align: middle;
+}
+.cyber-table tbody tr { transition: background 0.2s ease; }
+.cyber-table tbody tr:hover { background: rgba(0,245,255,0.03); }
+.cyber-table tbody tr:last-child td { border-bottom: none; }
+
+/* VPS name cell */
+.vps-cell { display: flex; align-items: center; gap: 0.85rem; }
+.vps-ava {
+  width: 38px; height: 38px;
+  border-radius: 11px;
+  background: linear-gradient(135deg, rgba(0,245,255,0.12), rgba(191,0,255,0.1));
+  border: 1px solid rgba(0,245,255,0.18);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--neon-cyan); font-size: 0.85rem; flex-shrink: 0;
+}
+.vps-nm { font-weight: 600; color: #e0ecff; font-size: 0.9rem; }
+.vps-id-lbl { font-size: 0.7rem; color: rgba(0,245,255,0.3); margin-top: 2px; font-family:'Orbitron',sans-serif; }
+
+/* Status badges */
+.status-cyber {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 13px; border-radius: 10px;
+  font-size: 0.76rem; font-weight: 700;
+  font-family: 'Orbitron', sans-serif;
+  letter-spacing: 0.05em;
+}
+.s-run  { background:rgba(0,255,136,0.08);  border:1px solid rgba(0,255,136,0.25); color:#00ff88; }
+.s-stop { background:rgba(100,130,180,0.08); border:1px solid rgba(100,130,180,0.2); color:#7fa0d0; }
+.s-sus  { background:rgba(255,107,0,0.08);   border:1px solid rgba(255,107,0,0.25); color:#ff9a4d; }
+.s-ledge { width:6px; height:6px; border-radius:50%; animation: pulseDot 1.5s ease-in-out infinite; }
+.sl-run  { background:#00ff88; color:#00ff88; }
+.sl-stop { background:#5a7070; }
+.sl-sus  { background:#ff6b00; color:#ff6b00; }
+
+/* Resource list */
+.res-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 0.76rem; color: rgba(0,245,255,0.6);
+  background: rgba(0,245,255,0.04);
+  border: 1px solid rgba(0,245,255,0.1);
+  border-radius: 6px; padding: 2px 8px; margin: 2px;
+  white-space: nowrap;
+}
+.res-chip i { color: rgba(0,245,255,0.4); font-size: 0.68rem; }
+
+/* Action btns */
+.act-btns { display: flex; gap: 0.4rem; }
+.act-btn {
+  width: 34px; height: 34px;
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid rgba(0,245,255,0.15);
+  background: rgba(0,245,255,0.04);
+  color: rgba(0,245,255,0.6);
+  font-size: 0.82rem; text-decoration: none;
+  transition: all 0.22s ease;
+}
+.act-btn:hover { border-color: rgba(0,245,255,0.5); background: rgba(0,245,255,0.12); color: var(--neon-cyan); transform: translateY(-2px) scale(1.1); box-shadow: 0 4px 16px rgba(0,245,255,0.2); }
+.act-btn.green { border-color: rgba(0,255,136,0.15); color: rgba(0,255,136,0.6); }
+.act-btn.green:hover { border-color:rgba(0,255,136,0.5); background:rgba(0,255,136,0.12); color:var(--neon-green); box-shadow:0 4px 16px rgba(0,255,136,0.2); }
+
+/* ── NOTIFICATIONS ── */
+.notif-feed { display: flex; flex-direction: column; }
+.notif-row {
+  display: flex; align-items: flex-start; gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid rgba(0,245,255,0.05);
+  transition: background 0.2s;
+  cursor: pointer;
+}
+.notif-row:hover { background: rgba(0,245,255,0.025); }
+.notif-row:last-child { border-bottom: none; }
+.notif-ico {
+  width: 38px; height: 38px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.9rem; flex-shrink: 0;
+}
+.ni-s { background:rgba(0,255,136,0.1); color:#00ff88; }
+.ni-w { background:rgba(255,107,0,0.1); color:#ff9a4d; }
+.ni-d { background:rgba(255,0,80,0.1); color:#ff3366; }
+.ni-i { background:rgba(0,245,255,0.1); color:#00f5ff; }
+.notif-title { font-size: 0.88rem; font-weight: 600; color: #c8dcf8; margin-bottom: 2px; }
+.notif-msg   { font-size: 0.78rem; color: rgba(100,140,200,0.7); line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.notif-ts    { font-size: 0.68rem; color: rgba(0,245,255,0.3); margin-top: 3px; font-family:'Orbitron',sans-serif; }
+
+/* ── NODE CARDS ── */
+.node-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap: 1rem; }
+.node-cy {
+  background: rgba(0,245,255,0.02);
+  border: 1px solid rgba(0,245,255,0.1);
+  border-radius: 14px;
+  padding: 1.1rem 1.25rem;
+  position: relative; overflow: hidden;
+  transition: all 0.3s ease;
+}
+.node-cy:hover { border-color: rgba(0,245,255,0.3); transform: translateY(-3px); box-shadow: 0 12px 40px rgba(0,0,0,0.4), 0 0 20px rgba(0,245,255,0.06); }
+.node-cy::before { content:''; position:absolute; top:0; left:10%; width:80%; height:1.5px; border-radius:1px; }
+.nc-on::before  { background:linear-gradient(90deg,transparent,var(--neon-green),transparent); box-shadow:0 0 8px var(--neon-green); }
+.nc-off::before { background:linear-gradient(90deg,transparent,#ff3366,transparent); }
+.node-hdr { display:flex; align-items:center; gap:0.75rem; margin-bottom:0.75rem; }
+.node-ico { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:0.9rem; }
+.nio-on  { background:rgba(0,255,136,0.1); color:#00ff88; }
+.nio-off { background:rgba(255,0,80,0.1); color:#ff3366; }
+.node-nm { font-size:0.88rem; font-weight:600; color:#c8e0ff; font-family:'Orbitron',sans-serif; letter-spacing:0.02em; }
+.node-loc{ font-size:0.72rem; color:rgba(0,245,255,0.35); }
+.node-bar-wrap { height:5px; border-radius:4px; background:rgba(0,245,255,0.06); overflow:hidden; margin-top:0.75rem; }
+.node-bar-fill { height:100%; border-radius:4px; background:linear-gradient(90deg,var(--neon-cyan),var(--neon-purple)); transition:width 1.2s cubic-bezier(0.34,1,0.64,1); }
+
+/* ── EMPTY STATE ── */
+.cyber-empty {
+  text-align:center; padding:3.5rem 2rem;
+  color: rgba(0,245,255,0.4);
+}
+.cyber-empty i { font-size:2.8rem; margin-bottom:1rem; display:block; }
+.cyber-empty h3 { font-size:1.1rem; font-weight:700; color:rgba(0,245,255,0.6); margin-bottom:0.5rem; font-family:'Orbitron',sans-serif; letter-spacing:0.05em; }
+.cyber-empty p  { font-size:0.85rem; color:rgba(0,245,255,0.3); }
+
+/* ── GRID LAYOUTS ── */
+.db-grid-2 { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:1.25rem; }
+.db-grid-3 { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:1rem; }
+
+/* ── STAGGER DELAYS ── */
+.anim-1{animation-delay:0.05s} .anim-2{animation-delay:0.12s} .anim-3{animation-delay:0.2s}
+.anim-4{animation-delay:0.28s} .anim-5{animation-delay:0.36s}
+
+/* ── MOBILE QUICK ACTIONS ── */
+#qaMobile { display:none; }
+@media(max-width:768px){
+  #qaMobile { display:block!important; }
+  .hero-holo-panel { display:none; }
+  .cyber-hero { flex-direction:column!important; }
+  .hero-title { font-size:1.4rem; }
+  .quick-nav-strip { gap:0.5rem; }
+  .qn-btn { padding:0.5rem 0.9rem; font-size:0.78rem; }
+}
+
+/* ── CYBER BTN STYLES ── */
+.cb-cyan {
+  background: linear-gradient(135deg, #007af5, #00f5ff);
+  border: none; color: #000; font-weight: 700;
+  box-shadow: 0 4px 18px rgba(0,245,255,0.3);
+  font-family: 'Orbitron', sans-serif; font-size:0.8rem; letter-spacing:0.05em;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  padding: 0.6rem 1.4rem; border-radius:10px;
+  display: inline-flex; align-items:center; gap:0.5rem;
+  text-decoration: none; cursor:pointer;
+}
+.cb-cyan:hover { transform:translateY(-2px); box-shadow:0 8px 30px rgba(0,245,255,0.5); }
+
+.cb-green {
+  background: linear-gradient(135deg, #00b86d, #00ff88);
+  border: none; color: #000; font-weight: 700;
+  box-shadow: 0 4px 18px rgba(0,255,136,0.25);
+  font-family: 'Orbitron', sans-serif; font-size:0.8rem; letter-spacing:0.05em;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  padding: 0.6rem 1.4rem; border-radius:10px;
+  display: inline-flex; align-items:center; gap:0.5rem;
+  text-decoration: none; cursor:pointer;
+}
+.cb-green:hover { transform:translateY(-2px); box-shadow:0 8px 30px rgba(0,255,136,0.4); }
+
+.cb-purple {
+  background: linear-gradient(135deg, #7700cc, #bf00ff);
+  border: none; color: #fff; font-weight: 700;
+  box-shadow: 0 4px 18px rgba(191,0,255,0.25);
+  font-family: 'Orbitron', sans-serif; font-size:0.8rem; letter-spacing:0.05em;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  padding: 0.6rem 1.4rem; border-radius:10px;
+  display: inline-flex; align-items:center; gap:0.5rem;
+  text-decoration: none; cursor:pointer;
+}
+.cb-purple:hover { transform:translateY(-2px); box-shadow:0 8px 30px rgba(191,0,255,0.4); }
+
+/* HUD line decorators */
+.section-divider {
+  display: flex; align-items: center; gap: 1rem;
+  margin: 0 0 1.5rem;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.68rem; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: rgba(0,245,255,0.35);
+}
+.section-divider::before,
+.section-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0,245,255,0.15), transparent);
+}
+</style>
+
+<!-- AMBIENT BG ELEMENTS -->
+<div class="db-grid-bg"></div>
+<div class="db-orb db-orb-1"></div>
+<div class="db-orb db-orb-2"></div>
+<div class="db-orb db-orb-3"></div>
+<div class="db-scanlines"></div>
+
+<div class="db-wrap">
+
+<!-- ══════════════════
+     COMMAND CENTER HERO
+══════════════════ -->
+<div class="cyber-hero" style="display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;">
+  <div class="hero-laser"></div>
+  <div class="hud-corner hud-tl"></div>
+  <div class="hud-corner hud-tr"></div>
+  <div class="hud-corner hud-bl"></div>
+  <div class="hud-corner hud-br"></div>
+
+  <div style="flex:1;min-width:240px;position:relative;z-index:1;">
+    <div class="hero-status-badge">
+      <span class="status-led"></span>
+      QVM Panel v1.0 &nbsp;·&nbsp; All Systems Nominal
+    </div>
+    <div class="hero-title">COMMAND CENTER</div>
+    <div style="font-family:'Orbitron',sans-serif;font-size:1rem;font-weight:700;color:rgba(0,245,255,0.7);margin-bottom:0.5rem;letter-spacing:0.05em;">
+      WELCOME, {{ current_user.username|upper }} ⚡
+    </div>
+    <div class="hero-sub">
+      Your infrastructure command feed — manage virtual servers, oversee node health, and control your entire cloud stack from one unified interface.
+    </div>
+    <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-top:1.5rem;">
+      <a href="{{ url_for('vps_list') }}" class="cb-cyan">
+        <i class="fas fa-server"></i> Manage VPS
+      </a>
+      {% if current_user.is_admin %}
+      <a href="{{ url_for('admin_vps_create') }}" class="cb-green">
+        <i class="fas fa-plus"></i> Deploy VPS
+      </a>
+      <a href="{{ url_for('admin_vm_create') }}" class="cb-purple">
+        <i class="fas fa-desktop"></i> Deploy VM
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="hero-holo-panel">
+    <div class="holo-metric">
+      <div class="hm-lbl">Total VPS</div>
+      <div class="hm-val">{{ vps_count }}<span class="hm-unit"> units</span></div>
+    </div>
+    <div class="holo-metric">
+      <div class="hm-lbl">Active</div>
+      <div class="hm-val green">{{ running_count }}<span class="hm-unit"> live</span></div>
+    </div>
+    <div class="holo-metric">
+      <div class="hm-lbl">CPU Cores</div>
+      <div class="hm-val">{{ total_cpu }}<span class="hm-unit"> cores</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════
+     QUICK NAV STRIP
+══════════════════ -->
+<div class="quick-nav-strip">
+  <a href="{{ url_for('vps_list') }}" class="qn-btn qn-cyan">
+    <i class="fas fa-server"></i> My Servers
+  </a>
+  <a href="{{ url_for('ports_list') }}" class="qn-btn qn-green">
+    <i class="fas fa-plug"></i> Port Manager
+  </a>
+  {% if current_user.is_admin %}
+  <a href="{{ url_for('admin_dashboard') }}" class="qn-btn qn-purple">
+    <i class="fas fa-crown"></i> Admin Panel
+  </a>
+  <a href="{{ url_for('admin_vps_create') }}" class="qn-btn qn-orange">
+    <i class="fas fa-plus-circle"></i> Deploy VPS
+  </a>
+  <a href="{{ url_for('admin_vm_create') }}" class="qn-btn qn-green">
+    <i class="fas fa-desktop"></i> Deploy VM
+  </a>
+  {% endif %}
+</div>
+
+
+
+<!-- ══════════════════
+     HOLOGRAPHIC STAT CARDS
+══════════════════ -->
+<div class="section-divider">System Metrics</div>
+<div class="stats-grid">
+  <!-- VPS Count -->
+  <div class="holo-stat hs-cyan">
+    <div class="hs-shimmer"></div>
+    <div class="hs-icon-wrap"><i class="fas fa-server"></i></div>
+    <div class="hs-value" id="val-vps">{{ vps_count }}</div>
+    <div class="hs-label">Virtual Servers</div>
+    <div class="hs-pills">
+      <span class="hs-pill pill-run">{{ running_count }} running</span>
+      <span class="hs-pill pill-stop">{{ stopped_count }} stopped</span>
+      {% if suspended_count %}<span class="hs-pill pill-sus">{{ suspended_count }} suspended</span>{% endif %}
+    </div>
+  </div>
+
+  <!-- CPU -->
+  <div class="holo-stat hs-green">
+    <div class="hs-shimmer"></div>
+    <div class="hs-icon-wrap"><i class="fas fa-microchip"></i></div>
+    <div class="hs-value" id="val-cpu">{{ total_cpu }}</div>
+    <div class="hs-label">CPU Cores Allocated</div>
+    <div class="hs-pills">
+      <span class="hs-pill pill-all">Across all instances</span>
+    </div>
+  </div>
+
+  <!-- RAM -->
+  <div class="holo-stat hs-purple">
+    <div class="hs-shimmer"></div>
+    <div class="hs-icon-wrap"><i class="fas fa-memory"></i></div>
+    <div class="hs-value" id="val-ram">{{ total_ram }}<span class="hs-unit">GB</span></div>
+    <div class="hs-label">RAM Allocated</div>
+    <div class="hs-pills">
+      <span class="hs-pill pill-all">Across all instances</span>
+    </div>
+  </div>
+
+  <!-- Storage -->
+  <div class="holo-stat hs-orange">
+    <div class="hs-shimmer"></div>
+    <div class="hs-icon-wrap"><i class="fas fa-hdd"></i></div>
+    <div class="hs-value" id="val-disk">{{ total_disk }}<span class="hs-unit">GB</span></div>
+    <div class="hs-label">Storage Allocated</div>
+    <div class="hs-pills">
+      <span class="hs-pill pill-all">Across all instances</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════
+     CHARTS ROW
+══════════════════ -->
+<div class="section-divider">Analytics</div>
+<div class="db-grid-2 anim-3" style="margin-bottom:2rem;">
+  <div class="cyber-card">
+    <div class="cc-header">
+      <div class="cc-title"><i class="fas fa-chart-donut"></i> VPS Status Overview</div>
+    </div>
+    <div class="cc-body">
+      <div class="chart-wrap"><canvas id="statusChart"></canvas></div>
+      <div class="chart-legend">
+        <div class="cl-item"><div class="cl-dot" style="background:#00ff88;box-shadow:0 0 6px #00ff88;"></div> Running: {{ running_count }}</div>
+        <div class="cl-item"><div class="cl-dot" style="background:#5a7090;"></div> Stopped: {{ stopped_count }}</div>
+        <div class="cl-item"><div class="cl-dot" style="background:#ff6b00;box-shadow:0 0 6px #ff6b00;"></div> Suspended: {{ suspended_count }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cyber-card">
+    <div class="cc-header">
+      <div class="cc-title"><i class="fas fa-chart-bar"></i> Resource Allocation</div>
+    </div>
+    <div class="cc-body">
+      <div class="chart-wrap"><canvas id="resourceChart"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════
+     VPS TABLE
+══════════════════ -->
+<div class="section-divider">Virtual Private Servers</div>
+<div class="cyber-card anim-4" style="margin-bottom:2rem;">
+  <div class="cc-header">
+    <div class="cc-title"><i class="fas fa-server"></i> My Servers</div>
+    <a href="{{ url_for('vps_list') }}" class="cc-view-all">View All <i class="fas fa-arrow-right"></i></a>
+  </div>
+
+  {% if vps_list %}
+  <div style="overflow-x:auto;">
+    <table class="cyber-table">
+      <thead>
+        <tr>
+          <th>Server</th>
+          <th>Status</th>
+          <th>Resources</th>
+          <th>IP Address</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for vps in vps_list[:5] %}
+        <tr>
+          <td>
+            <div class="vps-cell">
+              <div class="vps-ava"><i class="fas fa-server"></i></div>
+              <div>
+                <div class="vps-nm">{{ vps.hostname or vps.container_name }}</div>
+                <div class="vps-id-lbl">ID: {{ vps.id }}</div>
+              </div>
+            </div>
+          </td>
+          <td>
+            {% if vps.suspended %}
+            <div class="status-cyber s-sus"><span class="s-ledge sl-sus"></span> SUSPENDED</div>
+            {% elif vps.live_status == 'running' %}
+            <div class="status-cyber s-run"><span class="s-ledge sl-run"></span> ONLINE</div>
+            {% else %}
+            <div class="status-cyber s-stop"><span class="s-ledge sl-stop"></span> OFFLINE</div>
+            {% endif %}
+          </td>
+          <td>
+            <span class="res-chip"><i class="fas fa-microchip"></i>{{ vps.cpu }} CPU</span>
+            <span class="res-chip"><i class="fas fa-memory"></i>{{ vps.ram }}</span>
+            <span class="res-chip"><i class="fas fa-hdd"></i>{{ vps.storage }}</span>
+          </td>
+          <td>
+            <div style="font-family:monospace;font-size:0.82rem;color:rgba(0,245,255,0.8);">
+              {% if vps.ip_alias %}
+                {{ vps.ip_alias }}<div style="font-size:0.68rem;color:rgba(0,245,255,0.3);font-family:'Orbitron',sans-serif;">(alias)</div>
+              {% elif vps.ip_address %}{{ vps.ip_address }}
+              {% else %}<span style="color:rgba(0,245,255,0.25);">Not assigned</span>{% endif %}
+            </div>
+          </td>
+          <td>
+            <div class="act-btns">
+              <a href="{{ url_for('vps_detail', vps_id=vps.id) }}" class="act-btn" title="Manage"><i class="fas fa-cog"></i></a>
+              {% if vps.live_status == 'running' and not vps.suspended %}
+              <a href="{{ url_for('vps_console', vps_id=vps.id) }}" class="act-btn green" title="Console"><i class="fas fa-terminal"></i></a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="cyber-empty">
+    <i class="fas fa-server"></i>
+    <h3>NO SERVERS DETECTED</h3>
+    <p>Deploy your first virtual private server to begin.</p>
+    {% if current_user.is_admin %}
+    <a href="{{ url_for('admin_vps_create') }}" class="cb-cyan" style="margin-top:1.25rem;">
+      <i class="fas fa-plus"></i> Deploy VPS (LXC)
+    </a>
+    <a href="{{ url_for('admin_vm_create') }}" class="cb-green" style="margin-top:1.25rem;">
+      <i class="fas fa-desktop"></i> Deploy VM (KVM)
+    </a>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+<!-- ══════════════════
+     MOBILE QUICK ACTIONS
+══════════════════ -->
+<div class="cyber-card anim-3" id="qaMobile" style="margin-bottom:1.5rem;">
+  <div class="cc-header">
+    <div class="cc-title"><i class="fas fa-bolt"></i> Quick Actions</div>
+  </div>
+  <div class="cc-body">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+      <a href="{{ url_for('vps_list') }}" class="cb-cyan" style="justify-content:center;"><i class="fas fa-server"></i> My VPS</a>
+      <a href="{{ url_for('ports_list') }}" class="cb-green" style="justify-content:center;"><i class="fas fa-plug"></i> Ports</a>
+      {% if current_user.is_admin %}
+      <a href="{{ url_for('admin_dashboard') }}" class="cb-purple" style="justify-content:center;"><i class="fas fa-crown"></i> Admin</a>
+      <a href="{{ url_for('admin_vps_create') }}" class="cb-cyan" style="justify-content:center;"><i class="fas fa-plus"></i> VPS</a>
+      <a href="{{ url_for('admin_vm_create') }}" class="cb-green" style="justify-content:center;"><i class="fas fa-desktop"></i> VM</a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════
+     NOTIFICATIONS
+══════════════════ -->
+{% if notifications %}
+<div class="section-divider">Notifications</div>
+<div class="cyber-card anim-5" style="margin-bottom:2rem;">
+  <div class="cc-header">
+    <div class="cc-title"><i class="fas fa-bell"></i> Recent Alerts</div>
+    <a href="{{ url_for('notifications') }}" class="cc-view-all">View All <i class="fas fa-arrow-right"></i></a>
+  </div>
+  <div class="notif-feed">
+    {% for notif in notifications %}
+    <div class="notif-row" onclick="window.location.href='{{ url_for('notifications') }}'">
+      <div class="notif-ico ni-{% if notif.type == 'success' %}s{% elif notif.type == 'warning' %}w{% elif notif.type == 'danger' %}d{% else %}i{% endif %}">
+        <i class="fas fa-{% if notif.type == 'success' %}check-circle{% elif notif.type == 'warning' %}exclamation-triangle{% elif notif.type == 'danger' %}exclamation-circle{% else %}info-circle{% endif %}"></i>
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div class="notif-title">{{ notif.title }}</div>
+        <div class="notif-msg">{{ notif.message }}</div>
+        <div class="notif-ts">{{ notif.created_at|relative_time }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- ══════════════════
+     NODE STATUS (Admin)
+══════════════════ -->
+{% if current_user.is_admin and node_status %}
+<div class="section-divider">Node Infrastructure</div>
+<div class="cyber-card anim-5">
+  <div class="cc-header">
+    <div class="cc-title"><i class="fas fa-network-wired"></i> Node Status Grid</div>
+  </div>
+  <div class="cc-body">
+    <div class="node-grid">
+      {% for node in node_status %}
+      <div class="node-cy {% if node.online %}nc-on{% else %}nc-off{% endif %}">
+        <div class="node-hdr">
+          <div class="node-ico {% if node.online %}nio-on{% else %}nio-off{% endif %}">
+            <i class="fas fa-{% if node.online %}check-circle{% else %}exclamation-circle{% endif %}"></i>
+          </div>
+          <div>
+            <div class="node-nm">{{ node.name }}</div>
+            <div class="node-loc">{{ node.location }}</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;font-size:0.72rem;color:rgba(0,245,255,0.35);margin-bottom:0.5rem;font-family:'Orbitron',sans-serif;">
+          <span>VPS LOAD</span>
+          <span style="color:#b8d8f8;font-weight:700;">{{ node.vps_count }} / {{ node.total_vps }}</span>
+        </div>
+        <div class="node-bar-wrap">
+          <div class="node-bar-fill" style="width:{% if node.total_vps > 0 %}{{ ((node.vps_count / node.total_vps) * 100)|int }}{% else %}0{% endif %}%"></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+</div><!-- /db-wrap -->
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+
+  // Mobile quick actions
+  if (window.innerWidth <= 768) {
+    document.getElementById('qaMobile').style.display = 'block';
+  }
+
+  // ── Chart defaults: Cyber theme
+  Chart.defaults.color = 'rgba(0,245,255,0.45)';
+  Chart.defaults.borderColor = 'rgba(0,245,255,0.06)';
+  Chart.defaults.font.family = "'Orbitron', sans-serif";
+  Chart.defaults.font.size = 11;
+
+  /* ── STATUS DOUGHNUT (neon rings) ── */
+  const sCtx = document.getElementById('statusChart').getContext('2d');
+  const g1 = sCtx.createLinearGradient(0,0,0,300);
+  g1.addColorStop(0,'#00ff88'); g1.addColorStop(1,'#00cc6a');
+  const g2 = sCtx.createLinearGradient(0,0,0,300);
+  g2.addColorStop(0,'#3d5570'); g2.addColorStop(1,'#2a3d55');
+  const g3 = sCtx.createLinearGradient(0,0,0,300);
+  g3.addColorStop(0,'#ff6b00'); g3.addColorStop(1,'#cc5500');
+
+  new Chart(sCtx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Online', 'Offline', 'Suspended'],
+      datasets: [{
+        data: [{{ running_count }}, {{ stopped_count }}, {{ suspended_count }}],
+        backgroundColor: [g1, g2, g3],
+        borderColor: 'transparent',
+        borderWidth: 0,
+        hoverOffset: 10
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: '75%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(2,6,20,0.95)',
+          titleColor: '#00f5ff', bodyColor: '#b0d0ff',
+          borderColor: 'rgba(0,245,255,0.2)', borderWidth: 1,
+          padding: 14, cornerRadius: 12,
+          callbacks: {
+            label: function(c) {
+              const total = c.dataset.data.reduce((a,b)=>a+b,0);
+              const pct = total > 0 ? Math.round((c.parsed / total)*100) : 0;
+              return ` ${c.parsed} servers (${pct}%)`;
+            }
+          }
+        }
+      },
+      animation: { animateRotate: true, duration: 1400, easing: 'easeInOutCubic' }
+    }
+  });
+
+  /* ── RESOURCE BAR CHART (neon bars) ── */
+  const rCtx = document.getElementById('resourceChart').getContext('2d');
+  const barGrads = [
+    { from:'#00f5ff', to:'#007af5' },
+    { from:'#bf00ff', to:'#7700cc' },
+    { from:'#ff6b00', to:'#cc4400' }
+  ].map(c => {
+    const g = rCtx.createLinearGradient(0,0,0,240);
+    g.addColorStop(0, c.from); g.addColorStop(1, c.to); return g;
+  });
+
+  new Chart(rCtx, {
+    type: 'bar',
+    data: {
+      labels: ['CPU (cores)', 'RAM (GB)', 'Storage (GB)'],
+      datasets: [{
+        label: 'Allocated',
+        data: [{{ total_cpu }}, {{ total_ram }}, {{ total_disk }}],
+        backgroundColor: barGrads,
+        borderColor: ['#00f5ff','#bf00ff','#ff6b00'],
+        borderWidth: 1.5,
+        borderRadius: 10,
+        borderSkipped: false,
+        hoverBackgroundColor: ['rgba(0,245,255,0.9)','rgba(191,0,255,0.9)','rgba(255,107,0,0.9)']
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(2,6,20,0.95)',
+          titleColor: '#00f5ff', bodyColor: '#b0d0ff',
+          borderColor: 'rgba(0,245,255,0.2)', borderWidth: 1,
+          padding: 14, cornerRadius: 12
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(0,245,255,0.05)' },
+          ticks: { color: 'rgba(0,245,255,0.4)' }
+        },
+        y: {
+          beginAtZero: true,
+          grid: { color: 'rgba(0,245,255,0.05)' },
+          ticks: { color: 'rgba(0,245,255,0.4)' }
+        }
+      },
+      animation: { duration: 1200, easing: 'easeInOutQuart' }
+    }
+  });
+
+  /* ── COUNTER ANIMATION for hs-value elements ── */
+  document.querySelectorAll('.hs-value').forEach(el => {
+    // Get first text node number
+    let raw = '';
+    el.childNodes.forEach(n => { if(n.nodeType === 3) raw += n.textContent.trim(); });
+    const target = parseInt(raw) || 0;
+    if (!target) return;
+    const span = el.querySelector('.hs-unit');
+    let count = 0;
+    const step = Math.max(1, Math.ceil(target / 40));
+    const iv = setInterval(() => {
+      count = Math.min(count + step, target);
+      el.childNodes[0].textContent = count;
+      if (count >= target) { el.childNodes[0].textContent = target; clearInterval(iv); }
+    }, 28);
+  });
+
+  /* ── INTERSECTION OBSERVER for node bars ── */
+  const bars = document.querySelectorAll('.node-bar-fill');
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (!e.isIntersecting) return;
+      const el = e.target;
+      const w = el.style.width;
+      el.style.width = '0';
+      requestAnimationFrame(() => { el.style.transition = 'width 1.4s cubic-bezier(0.34,1,0.64,1)'; el.style.width = w; });
+      io.unobserve(el);
+    });
+  }, { threshold: 0.1 });
+  bars.forEach(b => { const w = b.style.width; b.style.width='0'; io.observe(b); });
+
+  /* ── 3D TILT on holo-stat cards ── */
+  document.querySelectorAll('.holo-stat').forEach(card => {
+    card.addEventListener('mousemove', e => {
+      const r = card.getBoundingClientRect();
+      const x = ((e.clientX - r.left) / r.width  - 0.5) * 12;
+      const y = ((e.clientY - r.top)  / r.height - 0.5) * -12;
+      card.style.transform = `translateY(-8px) rotateX(${y}deg) rotateY(${x}deg) scale(1.02)`;
+    });
+    card.addEventListener('mouseleave', () => {
+      card.style.transform = '';
+    });
+  });
+
+});
+</script>
+{% endblock %}

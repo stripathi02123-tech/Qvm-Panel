@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ panel_name }} — Node Console: {{ node.name }}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --bg: #0c1018; --bg2: #111722; --bg3: #1a2030;
+            --text: #e1e9f0; --muted: #6b7b8d;
+            --green: #10b981; --blue: #3b82f6; --red: #ef4444;
+            --border: #1e2a3a;
+        }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* ── Top Bar ── */
+        .topbar {
+            background: var(--bg2);
+            border-bottom: 1px solid var(--border);
+            padding: 0.5rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-shrink: 0;
+            z-index: 100;
+        }
+        .topbar-brand {
+            display: flex; align-items: center; gap: 0.5rem;
+            font-weight: 700; font-size: 0.9rem;
+            color: var(--green);
+        }
+        .topbar-brand i { font-size: 1rem; }
+        .topbar-node {
+            background: var(--bg3);
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            border-left: 3px solid var(--green);
+        }
+        .topbar-actions {
+            margin-left: auto;
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        .topbar-actions button, .topbar-actions a {
+            background: var(--bg3);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 0.3rem 0.75rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-family: inherit;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            transition: all 0.2s;
+        }
+        .topbar-actions button:hover, .topbar-actions a:hover {
+            background: var(--border);
+            border-color: var(--green);
+        }
+        .topbar-status {
+            display: flex; align-items: center; gap: 0.4rem;
+            font-size: 0.75rem;
+        }
+        .status-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--green);
+            animation: pulse 2s infinite;
+        }
+        .status-dot.offline { background: var(--red); animation: none; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* ── Terminal ── */
+        .terminal-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .terminal {
+            flex: 1;
+            background: #0a0e14;
+            padding: 1rem;
+            overflow-y: auto;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            scroll-behavior: smooth;
+        }
+        .terminal .line {
+            white-space: pre-wrap;
+            word-break: break-all;
+            margin-bottom: 0.1rem;
+        }
+        .terminal .line.output { color: #8b9cb6; }
+        .terminal .line.error { color: var(--red); }
+        .terminal .line.success { color: var(--green); }
+        .terminal .line.info { color: var(--blue); }
+        .terminal .prompt { color: var(--green); font-weight: 700; }
+        .terminal .cmd { color: #e1e9f0; }
+
+        /* ── Input Bar ── */
+        .input-bar {
+            background: var(--bg2);
+            border-top: 1px solid var(--border);
+            padding: 0.5rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-shrink: 0;
+        }
+        .input-bar .prompt-label {
+            color: var(--green);
+            font-weight: 700;
+            font-size: 0.85rem;
+            white-space: nowrap;
+        }
+        .input-bar input {
+            flex: 1;
+            background: var(--bg3);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 0.85rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .input-bar input:focus {
+            border-color: var(--green);
+        }
+        .input-bar button {
+            background: var(--green);
+            color: #fff;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: opacity 0.2s;
+        }
+        .input-bar button:hover { opacity: 0.85; }
+        .input-bar button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        /* ── Scrollbar ── */
+        .terminal::-webkit-scrollbar { width: 6px; }
+        .terminal::-webkit-scrollbar-track { background: var(--bg); }
+        .terminal::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+        /* ── Quick Commands ── */
+        .quick-cmds {
+            background: var(--bg2);
+            border-bottom: 1px solid var(--border);
+            padding: 0.4rem 1rem;
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+            flex-shrink: 0;
+        }
+        .quick-cmd {
+            background: var(--bg3);
+            border: 1px solid var(--border);
+            color: var(--muted);
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.7rem;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+        .quick-cmd:hover { color: var(--text); border-color: var(--green); }
+    </style>
+</head>
+<body>
+    <!-- Top Bar -->
+    <div class="topbar">
+        <div class="topbar-brand">
+            <i class="fas fa-terminal"></i>
+            QVM Panel
+        </div>
+        <div class="topbar-node">
+            <i class="fas fa-server"></i> {{ node.name }}
+            <span style="margin-left: 0.25rem; color: var(--muted);">{{ node.url if not node.is_local else 'localhost' }}</span>
+        </div>
+        <div class="topbar-status">
+            <div class="status-dot" id="statusDot"></div>
+            <span id="statusText">Connected</span>
+        </div>
+        <div class="topbar-actions">
+            <button onclick="clearTerminal()"><i class="fas fa-broom"></i> Clear</button>
+            <button onclick="scrollToBottom()"><i class="fas fa-arrow-down"></i> Bottom</button>
+            <a href="{{ url_for('admin_node_view', node_id=node.id) }}"><i class="fas fa-arrow-left"></i> Back</a>
+        </div>
+    </div>
+
+    <!-- Quick Commands -->
+    <div class="quick-cmds">
+        <button class="quick-cmd" onclick="runQuick('uname -a')">uname -a</button>
+        <button class="quick-cmd" onclick="runQuick('uptime')">uptime</button>
+        <button class="quick-cmd" onclick="runQuick('free -h')">free -h</button>
+        <button class="quick-cmd" onclick="runQuick('df -h')">df -h</button>
+        <button class="quick-cmd" onclick="runQuick('lscpu | head -20')">CPU Info</button>
+        <button class="quick-cmd" onclick="runQuick('ip addr show')">Network</button>
+        <button class="quick-cmd" onclick="runQuick('lxc-ls -f')">LXC Containers</button>
+        <button class="quick-cmd" onclick="runQuick('ps aux --sort=-%cpu | head -15')">Top CPU</button>
+        <button class="quick-cmd" onclick="runQuick('ps aux --sort=-%mem | head -15')">Top RAM</button>
+        <button class="quick-cmd" onclick="runQuick('cat /etc/os-release')">OS Info</button>
+        <button class="quick-cmd" onclick="runQuick('neofetch --stdout')">Neofetch</button>
+        <button class="quick-cmd" onclick="runQuick('fastfetch')">Fastfetch</button>
+        <button class="quick-cmd" onclick="runQuick('who')">Who</button>
+        <button class="quick-cmd" onclick="runQuick('last -10')">Last Logins</button>
+        <button class="quick-cmd" onclick="runQuick('journalctl -n 20 --no-pager')">Logs</button>
+    </div>
+
+    <!-- Terminal -->
+    <div class="terminal-container">
+        <div class="terminal" id="terminal">
+            <div class="line info">╔══════════════════════════════════════════════════════════════╗</div>
+            <div class="line info">║  {{ panel_name }} — Node Console                              ║</div>
+            <div class="line info">║  Node: {{ node.name }}{% if node.is_local %} (Local){% else %} (Remote){% endif %}                                          ║</div>
+            <div class="line info">║  Type commands below or use quick actions above              ║</div>
+            <div class="line info">╚══════════════════════════════════════════════════════════════╝</div>
+            <div class="line">&nbsp;</div>
+        </div>
+
+        <!-- Input -->
+        <div class="input-bar">
+            <span class="prompt-label">root@{{ node.name }}:~$</span>
+            <input type="text" id="cmdInput" placeholder="Enter command..." autofocus
+                   onkeydown="if(event.key==='Enter') execCmd()">
+            <button onclick="execCmd()" id="execBtn">
+                <i class="fas fa-play"></i> Run
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const nodeId = {{ node.id }};
+        const terminal = document.getElementById('terminal');
+        const cmdInput = document.getElementById('cmdInput');
+        const execBtn = document.getElementById('execBtn');
+        let cmdHistory = JSON.parse(localStorage.getItem('node_cmd_history') || '[]');
+        let historyIdx = -1;
+
+        function addLine(text, cls = 'output') {
+            const div = document.createElement('div');
+            div.className = 'line ' + cls;
+            div.textContent = text;
+            terminal.appendChild(div);
+            scrollToBottom();
+        }
+
+        function scrollToBottom() {
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        function clearTerminal() {
+            terminal.innerHTML = '';
+            addLine('Terminal cleared.', 'info');
+        }
+
+        function runQuick(cmd) {
+            cmdInput.value = cmd;
+            execCmd();
+        }
+
+        async function execCmd() {
+            const cmd = cmdInput.value.trim();
+            if (!cmd) return;
+
+            // Add to history
+            if (cmdHistory[0] !== cmd) {
+                cmdHistory.unshift(cmd);
+                if (cmdHistory.length > 100) cmdHistory.pop();
+                localStorage.setItem('node_cmd_history', JSON.stringify(cmdHistory));
+            }
+            historyIdx = -1;
+
+            addLine('$ ' + cmd, 'prompt');
+            cmdInput.value = '';
+            execBtn.disabled = true;
+
+            try {
+                const resp = await fetch('/node/' + nodeId + '/console/exec', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command: cmd })
+                });
+                const data = await resp.json();
+
+                if (data.success) {
+                    const output = data.output || '';
+                    if (typeof output === 'string') {
+                        output.split('\n').forEach(line => addLine(line, 'output'));
+                    } else if (output.stdout) {
+                        output.stdout.split('\n').forEach(line => addLine(line, 'output'));
+                        if (output.stderr) {
+                            output.stderr.split('\n').forEach(line => addLine(line, 'error'));
+                        }
+                    }
+                } else {
+                    addLine('Error: ' + (data.error || 'Command failed'), 'error');
+                }
+            } catch (e) {
+                addLine('Connection error: ' + e.message, 'error');
+            }
+
+            execBtn.disabled = false;
+            cmdInput.focus();
+        }
+
+        // Arrow key history
+        cmdInput.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (historyIdx < cmdHistory.length - 1) {
+                    historyIdx++;
+                    cmdInput.value = cmdHistory[historyIdx] || '';
+                }
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (historyIdx > 0) {
+                    historyIdx--;
+                    cmdInput.value = cmdHistory[historyIdx] || '';
+                } else {
+                    historyIdx = -1;
+                    cmdInput.value = '';
+                }
+            }
+        });
+
+        // Auto-focus
+        document.addEventListener('click', () => cmdInput.focus());
+    </script>
+</body>
+</html>

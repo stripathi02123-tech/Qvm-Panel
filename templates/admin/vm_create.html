@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+
+{% block title %}Create Virtual Machine - {{ panel_name }}{% endblock %}
+{% block header_title %}Create Virtual Machine{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumb">
+    <a href="{{ url_for('dashboard') }}" class="breadcrumb-item">Dashboard</a>
+    <span class="breadcrumb-separator"><i class="fas fa-chevron-right"></i></span>
+    <a href="{{ url_for('admin_dashboard') }}" class="breadcrumb-item">Admin</a>
+    <span class="breadcrumb-separator"><i class="fas fa-chevron-right"></i></span>
+    <span class="breadcrumb-item active">Create VM</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Deploy Progress Overlay (same as VPS create) -->
+<div id="deployOverlay" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(2,4,8,0.96); backdrop-filter:blur(12px); align-items:center; justify-content:center;">
+    <div style="width:680px; max-width:95vw; background:#0c1018; border:1px solid rgba(16,185,129,0.25); border-radius:16px; overflow:hidden; box-shadow:0 0 80px rgba(16,185,129,0.15);">
+        <div style="padding:1.25rem 1.5rem; border-bottom:1px solid rgba(16,185,129,0.15); display:flex; align-items:center; gap:0.75rem;">
+            <div style="width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg,#10b981,#059669); display:flex; align-items:center; justify-content:center;">
+                <i class="fas fa-desktop" style="color:#fff; font-size:1rem;"></i>
+            </div>
+            <div>
+                <div style="font-weight:700; font-size:1rem; color:#e1e9f0;">AVM VM Deployer</div>
+                <div id="deploySubtext" style="font-size:0.75rem; color:rgba(160,240,200,0.6);">Initializing deployment…</div>
+            </div>
+            <div id="deployProgressPercent" style="margin-left:auto; font-size:1.5rem; font-weight:800; color:#10b981; font-family:monospace;">0%</div>
+        </div>
+        <div style="height:4px; background:#141820;">
+            <div id="deployProgressBar" style="height:100%; width:0%; background:linear-gradient(90deg,#10b981,#34d399,#6ee7b7); transition:width 0.4s ease; border-radius:0 2px 2px 0;"></div>
+        </div>
+        <div id="deployLog" style="padding:1rem 1.5rem; height:380px; overflow-y:auto; font-family:'JetBrains Mono','Fira Code','SF Mono',monospace; font-size:0.8rem; line-height:1.9; background:#080b10;">
+            <div style="color:rgba(16,185,129,0.6); margin-bottom:0.5rem;">$ avm vm-deploy --cloud-init</div>
+        </div>
+        <div id="deployFooter" style="display:none; padding:1rem 1.5rem; border-top:1px solid rgba(16,185,129,0.15); background:#0e1218;">
+            <div id="deployResultBox"></div>
+        </div>
+    </div>
+</div>
+
+<style>
+@keyframes typeIn{from{opacity:0;transform:translateX(-6px);}to{opacity:1;transform:translateX(0);}}
+.deploy-line{animation:typeIn 0.3s ease forwards;}
+</style>
+
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">
+            <i class="fas fa-desktop"></i>
+            New Virtual Machine (QEMU/KVM)
+        </h3>
+    </div>
+
+    <form id="createVMForm">
+        <div class="grid grid-2">
+            <div class="form-group">
+                <label class="form-label">Owner <span style="color: var(--accent-danger);">*</span></label>
+                <select id="user_id" class="form-control" required>
+                    <option value="">Select user...</option>
+                    {% for user in users %}
+                    <option value="{{ user.id }}">{{ user.username }} ({{ user.email }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Node <span style="color: var(--accent-danger);">*</span></label>
+                <select id="node_id" class="form-control" required>
+                    <option value="">Select node...</option>
+                    {% for node in nodes %}
+                    <option value="{{ node.id }}">{{ node.name }} ({{ node.location }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">VM Name <span style="color: var(--accent-danger);">*</span></label>
+                <input type="text" id="vm_name" class="form-control" placeholder="e.g., my-vm-01" required>
+                <small style="color: var(--text-muted);">Alphanumeric and hyphens only</small>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Operating System <span style="color: var(--accent-danger);">*</span></label>
+                <select id="image_url" class="form-control" required>
+                    <option value="">Select OS image…</option>
+                    {% for img in cloudinit_images %}
+                    <option value="{{ img.url }}">{{ img.name }} (Cloud-Init)</option>
+                    {% endfor %}
+                </select>
+                <small style="color: var(--text-muted);">Cloud-init images for fast deployment</small>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">vCPU Cores</label>
+                <input type="number" id="cpu" class="form-control" value="{{ vm_settings.vm_default_cpu }}" min="1" max="32">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">RAM (MB)</label>
+                <input type="number" id="ram" class="form-control" value="{{ vm_settings.vm_default_ram }}" min="512" max="131072" step="256">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Disk (GB)</label>
+                <input type="number" id="disk" class="form-control" value="{{ vm_settings.vm_default_disk }}" min="5" max="2000">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">IP Address</label>
+                <input type="text" id="ip_address" class="form-control" placeholder="e.g., 10.0.0.200">
+                <small style="color: var(--text-muted);">Optional static IP</small>
+            </div>
+        </div>
+
+        <!-- VM Info -->
+        <div style="margin: 1.5rem 0; padding: 1rem; background-color: var(--bg-secondary); border-radius: var(--border-radius-sm); border: 1px solid rgba(16,185,129,0.25);">
+            <h4 style="margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem; color: #10b981;">
+                <i class="fas fa-info-circle"></i>
+                Virtual Machine Info
+            </h4>
+            <ul style="margin: 0; padding-left: 1.25rem; color: var(--text-muted); font-size: 0.875rem; line-height: 1.8;">
+                <li>VMs run with <strong>QEMU/KVM</strong> hardware acceleration</li>
+                <li>Uses <strong>cloud-init</strong> for automatic OS configuration</li>
+                <li>Root password login enabled via SSH</li>
+                <li><strong>noVNC console</strong> available for desktop-like access (RDP equivalent)</li>
+                <li>Supports Debian 12 and Ubuntu 24.04 cloud images</li>
+            </ul>
+        </div>
+
+        <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+            <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline">Cancel</a>
+            <button type="submit" class="btn btn-success">
+                <i class="fas fa-desktop"></i> Create Virtual Machine
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function(){
+    const overlay = document.getElementById('deployOverlay');
+    const logBox  = document.getElementById('deployLog');
+    const bar     = document.getElementById('deployProgressBar');
+    const pctEl   = document.getElementById('deployProgressPercent');
+    const subtext = document.getElementById('deploySubtext');
+    const footer  = document.getElementById('deployFooter');
+    const resBox  = document.getElementById('deployResultBox');
+
+    const TS = () => new Date().toLocaleTimeString('en-US', {hour12:false});
+
+    function showOverlay() {
+        overlay.style.display = 'flex';
+        logBox.innerHTML = '<div style="color:rgba(16,185,129,0.6);margin-bottom:0.5rem;">$ avm vm-deploy --cloud-init</div>';
+        bar.style.width = '0%'; pctEl.textContent = '0%'; pctEl.style.color = '#10b981';
+        bar.style.background = 'linear-gradient(90deg,#10b981,#34d399,#6ee7b7)';
+        footer.style.display = 'none';
+    }
+
+    function appendLine(msg, color, icon) {
+        const line = document.createElement('div');
+        line.className = 'deploy-line';
+        line.style.color = color || '#a0f0c0';
+        line.innerHTML = '<span style="color:rgba(100,180,140,0.4);margin-right:0.5rem;">[' + TS() + ']</span> ' + (icon||'▸') + ' ' + msg;
+        logBox.appendChild(line);
+        logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    function connectDeploy() {
+        if (typeof io === 'undefined') return null;
+        const s = io();
+        s.on('connect', () => s.emit('join_deploy_room'));
+        s.on('deploy_progress', d => {
+            const pct = d.total > 0 ? Math.round((d.step / d.total) * 100) : 0;
+            bar.style.width = pct + '%';
+            pctEl.textContent = pct + '%';
+            subtext.textContent = d.message;
+            if (d.status === 'running') appendLine(d.message, '#60fa90', '⟳');
+            else if (d.status === 'step_done') appendLine(d.message, '#34d399', '✔');
+            else if (d.status === 'completed') {
+                appendLine('', '#10b981');
+                appendLine('═══════════════════════════════════════════════', '#10b981');
+                appendLine('  VM INSTALLATION COMPLETED SUCCESSFULLY', '#34d399', '🎉');
+                appendLine('═══════════════════════════════════════════════', '#10b981');
+                bar.style.background = 'linear-gradient(90deg,#10b981,#34d399)';
+                showFooter();
+            }
+        });
+        return s;
+    }
+
+    function showFooter() {
+        footer.style.display = 'block';
+        const pw = window._deployRootPw || 'root';
+        const ip = document.getElementById('ip_address').value || 'YOUR_SERVER_IP';
+        resBox.innerHTML = `
+            <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem;">
+                <div style="width:32px;height:32px;border-radius:8px;background:rgba(16,185,129,0.15);display:flex;align-items:center;justify-content:center;">
+                    <i class="fas fa-key" style="color:#10b981;"></i>
+                </div>
+                <div>
+                    <div style="font-weight:700;color:#e1e9f0;">SSH Login Credentials</div>
+                    <div style="font-size:0.75rem;color:rgba(160,240,200,0.5);">Root password login enabled</div>
+                </div>
+            </div>
+            <div style="background:#080b10;border:1px solid rgba(16,185,129,0.2);border-radius:10px;padding:0.85rem 1rem;font-family:monospace;font-size:0.8rem;line-height:2;">
+                <div><span style="color:rgba(100,180,140,0.5);">HOST</span>  ${ip}</div>
+                <div><span style="color:rgba(100,180,140,0.5);">USER</span>  root</div>
+                <div><span style="color:rgba(100,180,140,0.5);">PASS</span>  <span style="color:#f59e0b;font-weight:700;">${pw}</span>
+                    <button onclick="navigator.clipboard.writeText('${pw}');this.innerHTML='✓'" style="margin-left:0.5rem;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:6px;padding:2px 8px;color:#f59e0b;cursor:pointer;font-size:0.7rem;">📋</button>
+                </div>
+                <div style="margin-top:0.5rem;"><span style="color:rgba(100,180,140,0.5);">SSH</span>  <span style="color:#34d399;">ssh root@${ip}</span></div>
+            </div>
+            <div style="margin-top:0.75rem;display:flex;gap:0.75rem;justify-content:flex-end;">
+                <a href="{{ url_for('admin_dashboard') }}" class="btn btn-primary" style="font-size:0.8rem;"><i class="fas fa-list"></i> Back to Dashboard</a>
+            </div>
+        `;
+    }
+
+    document.getElementById('createVMForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const payload = {
+            user_id: parseInt(document.getElementById('user_id').value),
+            node_id: parseInt(document.getElementById('node_id').value),
+            vm_name: document.getElementById('vm_name').value,
+            image_url: document.getElementById('image_url').value,
+            cpu: parseInt(document.getElementById('cpu').value),
+            ram: parseInt(document.getElementById('ram').value),
+            disk: parseInt(document.getElementById('disk').value),
+            ip_address: document.getElementById('ip_address').value || null
+        };
+        if (!payload.user_id || !payload.node_id || !payload.vm_name || !payload.image_url) {
+            showToast('Please fill in all required fields', 'warning');
+            return;
+        }
+        showOverlay();
+        const sock = connectDeploy();
+        appendLine('Deploying Virtual Machine…', '#60fa90', '🖥️');
+        appendLine(`VM: ${payload.vm_name} | CPU: ${payload.cpu} | RAM: ${payload.ram}MB | Disk: ${payload.disk}GB`, '#a0f0c0', '📋');
+        try {
+            const resp = await fetch('/admin/vm/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await resp.json();
+            if (result.success) {
+                window._deployRootPw = result.root_password;
+                appendLine(`VM: ${result.container_name} (ID: #${result.vps_id})`, '#34d399', '📦');
+                setTimeout(() => { if (footer.style.display === 'none') showFooter(); }, 1500);
+            } else {
+                appendLine('DEPLOYMENT FAILED: ' + (result.error || 'Unknown error'), '#ef4444', '✖');
+                bar.style.background = 'linear-gradient(90deg,#ef4444,#f87171)';
+            }
+        } catch(err) {
+            appendLine('NETWORK ERROR: ' + err.message, '#ef4444', '✖');
+            bar.style.background = 'linear-gradient(90deg,#ef4444,#f87171)';
+        }
+    });
+})();
+</script>
+{% endblock %}

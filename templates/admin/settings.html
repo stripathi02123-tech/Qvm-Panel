@@ -1,0 +1,516 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - {{ panel_name }}{% endblock %}
+
+{% block header_title %}Panel Settings{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumb">
+    <a href="{{ url_for('dashboard') }}" class="breadcrumb-item">Dashboard</a>
+    <span class="breadcrumb-separator"><i class="fas fa-chevron-right"></i></span>
+    <a href="{{ url_for('admin_dashboard') }}" class="breadcrumb-item">Admin</a>
+    <span class="breadcrumb-separator"><i class="fas fa-chevron-right"></i></span>
+    <span class="breadcrumb-item active">Settings</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<form method="POST" action="{{ url_for('admin_settings') }}">
+    <!-- General Settings -->
+    <div class="card" style="margin-bottom: 1.5rem;">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-globe"></i>
+                General Settings
+            </h3>
+        </div>
+
+        <div class="grid grid-2">
+            <div class="form-group">
+                <label class="form-label">Site Name</label>
+                <input type="text" name="site_name" class="form-control" value="{{ settings.site_name }}">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Site Description</label>
+                <input type="text" name="site_description" class="form-control" value="{{ settings.site_description }}">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Footer Text</label>
+                <input type="text" name="footer_text" class="form-control" value="{{ settings.footer_text }}">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Timezone</label>
+                <select name="timezone" class="form-control">
+                    <option value="UTC" {% if settings.timezone == 'UTC' %}selected{% endif %}>UTC</option>
+                    <option value="America/New_York" {% if settings.timezone == 'America/New_York' %}selected{% endif %}>US/Eastern</option>
+                    <option value="America/Chicago" {% if settings.timezone == 'America/Chicago' %}selected{% endif %}>US/Central</option>
+                    <option value="America/Denver" {% if settings.timezone == 'America/Denver' %}selected{% endif %}>US/Mountain</option>
+                    <option value="America/Los_Angeles" {% if settings.timezone == 'America/Los_Angeles' %}selected{% endif %}>US/Pacific</option>
+                    <option value="Europe/London" {% if settings.timezone == 'Europe/London' %}selected{% endif %}>Europe/London</option>
+                    <option value="Europe/Paris" {% if settings.timezone == 'Europe/Paris' %}selected{% endif %}>Europe/Paris</option>
+                    <option value="Asia/Tokyo" {% if settings.timezone == 'Asia/Tokyo' %}selected{% endif %}>Asia/Tokyo</option>
+                    <option value="Asia/Shanghai" {% if settings.timezone == 'Asia/Shanghai' %}selected{% endif %}>Asia/Shanghai</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-checkbox" style="display: flex; align-items: center; gap: 0.5rem;">
+                <input type="checkbox" name="registration_enabled" {% if settings.registration_enabled == '1' %}checked{% endif %}>
+                <span>Enable user registration</span>
+            </label>
+        </div>
+    </div>
+
+    <!-- Branding Settings -->
+    <div class="card" style="margin-bottom: 1.5rem;">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-paint-brush"></i>
+                Branding
+            </h3>
+        </div>
+
+        <div class="grid grid-2">
+            <!-- Header Icon -->
+            <div class="form-group">
+                <label class="form-label">Header / Sidebar Logo</label>
+                <div style="display:flex;gap:0.5rem;align-items:center;">
+                    <input type="text" name="header_icon" class="form-control" value="{{ settings.header_icon }}" id="headerIcon" placeholder="/static/img/logo.png">
+                    <button type="button" class="btn btn-outline" onclick="document.getElementById('headerIconUpload').click()" title="Upload image">
+                        <i class="fas fa-upload"></i>
+                    </button>
+                </div>
+                <!-- Live preview -->
+                <div id="headerIconPreview" style="margin-top:0.75rem;display:flex;align-items:center;gap:0.75rem;padding:0.75rem;background:var(--bg-tertiary);border-radius:8px;border:1px solid var(--border-color);">
+                    {% if settings.header_icon %}
+                    <img id="headerIconImg" src="{{ settings.header_icon }}" alt="Logo preview"
+                         style="height:40px;width:40px;object-fit:contain;border-radius:6px;background:var(--bg-elevated);"
+                         onerror="this.style.display='none';document.getElementById('headerIconFallback').style.display='flex'">
+                    <div id="headerIconFallback" style="display:none;width:40px;height:40px;border-radius:6px;background:var(--bg-elevated);align-items:center;justify-content:center;color:var(--text-muted);font-size:1.2rem;"><i class="fas fa-image"></i></div>
+                    {% else %}
+                    <div id="headerIconImg" style="display:none;"></div>
+                    <div id="headerIconFallback" style="display:flex;width:40px;height:40px;border-radius:6px;background:var(--bg-elevated);align-items:center;justify-content:center;color:var(--text-muted);font-size:1.2rem;"><i class="fas fa-image"></i></div>
+                    {% endif %}
+                    <div>
+                        <div style="font-size:0.8rem;font-weight:600;color:var(--text-primary);">Sidebar Logo</div>
+                        <div style="font-size:0.72rem;color:var(--text-muted);" id="headerIconPath">{{ settings.header_icon or 'No custom logo set' }}</div>
+                    </div>
+                    {% if settings.header_icon %}
+                    <button type="button" onclick="clearLogo('header')" style="margin-left:auto;background:none;border:none;color:var(--accent-danger);cursor:pointer;font-size:0.8rem;" title="Remove custom logo">
+                        <i class="fas fa-times"></i> Remove
+                    </button>
+                    {% endif %}
+                </div>
+                <small style="color:var(--text-muted);margin-top:0.25rem;display:block;">Accepts PNG, JPG, SVG, GIF. Recommended: 64×64px. Saved instantly on upload.</small>
+            </div>
+
+            <!-- Favicon -->
+            <div class="form-group">
+                <label class="form-label">Favicon</label>
+                <div style="display:flex;gap:0.5rem;align-items:center;">
+                    <input type="text" name="favicon" class="form-control" value="{{ settings.favicon }}" id="favicon" placeholder="/static/img/favicon.ico">
+                    <button type="button" class="btn btn-outline" onclick="document.getElementById('faviconUpload').click()" title="Upload favicon">
+                        <i class="fas fa-upload"></i>
+                    </button>
+                </div>
+                <div id="faviconPreview" style="margin-top:0.75rem;display:flex;align-items:center;gap:0.75rem;padding:0.75rem;background:var(--bg-tertiary);border-radius:8px;border:1px solid var(--border-color);">
+                    {% if settings.favicon %}
+                    <img id="faviconImg" src="{{ settings.favicon }}" alt="Favicon preview"
+                         style="height:32px;width:32px;object-fit:contain;border-radius:4px;background:var(--bg-elevated);"
+                         onerror="this.style.display='none'">
+                    {% else %}
+                    <div id="faviconImg" style="display:none;"></div>
+                    {% endif %}
+                    <div>
+                        <div style="font-size:0.8rem;font-weight:600;color:var(--text-primary);">Browser Tab Icon</div>
+                        <div style="font-size:0.72rem;color:var(--text-muted);" id="faviconPath">{{ settings.favicon or 'No custom favicon set' }}</div>
+                    </div>
+                </div>
+                <small style="color:var(--text-muted);margin-top:0.25rem;display:block;">Accepts .ico or .png. Saved instantly on upload.</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resource Limits -->
+    <div class="card" style="margin-bottom: 1.5rem;">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-chart-line"></i>
+                Resource Limits
+            </h3>
+        </div>
+
+        <div class="grid grid-2">
+            <div class="form-group">
+                <label class="form-label">CPU Threshold (%)</label>
+                <input type="number" name="cpu_threshold" class="form-control" value="{{ settings.cpu_threshold }}" min="1" max="100">
+                <small>VPS will be suspended above this CPU usage</small>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">RAM Threshold (%)</label>
+                <input type="number" name="ram_threshold" class="form-control" value="{{ settings.ram_threshold }}" min="1" max="100">
+                <small>VPS will be suspended above this RAM usage</small>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Default Port Quota</label>
+                <input type="number" name="default_port_quota" class="form-control" value="{{ settings.default_port_quota }}" min="0" max="1000">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Max VPS Per User</label>
+                <input type="number" name="max_vps_per_user" class="form-control" value="{{ settings.max_vps_per_user }}" min="1" max="1000">
+            </div>
+        </div>
+    </div>
+
+    <!-- Backup Settings -->
+    <div class="card" style="margin-bottom: 1.5rem;">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-database"></i>
+                Backup Settings
+            </h3>
+        </div>
+
+        <div class="form-group">
+            <label class="form-checkbox" style="display: flex; align-items: center; gap: 0.5rem;">
+                <input type="checkbox" name="backup_enabled" {% if settings.backup_enabled == '1' %}checked{% endif %}>
+                <span>Enable automatic backups</span>
+            </label>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Backup Retention (days)</label>
+            <input type="number" name="backup_retention" class="form-control" value="{{ settings.backup_retention }}" min="1" max="365">
+        </div>
+    </div>
+
+    <!-- Maintenance Mode -->
+    <div class="card" style="margin-bottom: 1.5rem;">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-tools"></i>
+                Maintenance
+            </h3>
+        </div>
+
+        <div class="form-group">
+            <label class="form-checkbox" style="display: flex; align-items: center; gap: 0.5rem;">
+                <input type="checkbox" name="maintenance_mode" {% if settings.maintenance_mode == '1' %}checked{% endif %}>
+                <span>Enable maintenance mode</span>
+            </label>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Maintenance Message</label>
+            <textarea name="maintenance_message" class="form-control" rows="3">{{ settings.maintenance_message }}</textarea>
+        </div>
+    </div>
+
+    <!-- Discord Authentication -->
+    <div class="card" style="margin-bottom: 1.5rem;">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fab fa-discord"></i>
+                Discord Authentication
+            </h3>
+        </div>
+
+        <div class="form-group">
+            <label class="form-checkbox" style="display: flex; align-items: center; gap: 0.5rem;">
+                <input type="checkbox" name="discord_auth_enabled" {% if settings.discord_auth_enabled == '1' %}checked{% endif %}>
+                <span>Enable Discord Authentication</span>
+            </label>
+            <small style="color: var(--text-muted); display: block; margin-top: 0.25rem;">Allow users to log in and register with Discord</small>
+        </div>
+
+        <div class="grid grid-2">
+            <div class="form-group">
+                <label class="form-label">Discord Client ID</label>
+                <input type="text" name="discord_client_id" class="form-control" value="{{ settings.discord_client_id }}" placeholder="Your Discord Application Client ID">
+                <small style="color: var(--text-muted);">Get this from Discord Developer Portal</small>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Discord Client Secret</label>
+                <input type="password" name="discord_client_secret" class="form-control" value="{{ settings.discord_client_secret }}" placeholder="Your Discord Application Client Secret">
+                <small style="color: var(--text-muted);">Keep this secret! Never share it publicly</small>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Redirect URI</label>
+            <input type="text" name="discord_redirect_uri" class="form-control" value="{{ settings.discord_redirect_uri }}" placeholder="http://your-domain.com/auth/discord/callback">
+            <small style="color: var(--text-muted);">Must match the redirect URI in Discord Developer Portal</small>
+        </div>
+
+        <div class="form-group">
+            <label class="form-checkbox" style="display: flex; align-items: center; gap: 0.5rem;">
+                <input type="checkbox" name="discord_auto_register" {% if settings.discord_auto_register == '1' %}checked{% endif %}>
+                <span>Allow Auto-Registration</span>
+            </label>
+            <small style="color: var(--text-muted); display: block; margin-top: 0.25rem;">Automatically create accounts for new Discord users</small>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Button Text</label>
+            <input type="text" name="discord_button_text" class="form-control" value="{{ settings.discord_button_text }}" placeholder="Continue with Discord">
+            <small style="color: var(--text-muted);">Text displayed on Discord login/register buttons</small>
+        </div>
+
+        <div style="padding: 1rem; background: var(--bg-secondary); border-radius: 0.5rem; border-left: 3px solid #5865F2;">
+            <p style="margin: 0; font-size: 0.875rem; color: var(--text-muted);">
+                <i class="fas fa-info-circle" style="color: #5865F2;"></i>
+                <strong>Setup Instructions:</strong>
+            </p>
+            <ol style="margin: 0.5rem 0 0 1.5rem; font-size: 0.875rem; color: var(--text-muted);">
+                <li>Go to <a href="https://discord.com/developers/applications" target="_blank" style="color: #5865F2;">Discord Developer Portal</a></li>
+                <li>Create a new application or select an existing one</li>
+                <li>Go to OAuth2 → General</li>
+                <li>Add your Redirect URI (e.g., http://your-domain.com/auth/discord/callback)</li>
+                <li>Copy Client ID and Client Secret and paste them above</li>
+                <li>Save changes</li>
+            </ol>
+        </div>
+    </div>
+
+    <!-- Google Authentication -->
+    <div class="card" style="margin-bottom: 1.5rem;">
+        <div class="card-header">
+            <h3 class="card-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" style="vertical-align: middle;"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                Google Authentication
+            </h3>
+        </div>
+
+        <div class="form-group">
+            <label class="form-checkbox" style="display: flex; align-items: center; gap: 0.5rem;">
+                <input type="checkbox" name="google_auth_enabled" {% if settings.google_auth_enabled == '1' %}checked{% endif %}>
+                <span>Enable Google Authentication</span>
+            </label>
+            <small style="color: var(--text-muted); display: block; margin-top: 0.25rem;">Allow users to log in and register with Google</small>
+        </div>
+
+        <div class="grid grid-2">
+            <div class="form-group">
+                <label class="form-label">Google Client ID</label>
+                <input type="text" name="google_client_id" class="form-control" value="{{ settings.google_client_id }}" placeholder="Your Google OAuth Client ID">
+                <small style="color: var(--text-muted);">Get this from Google Cloud Console</small>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Google Client Secret</label>
+                <input type="password" name="google_client_secret" class="form-control" value="{{ settings.google_client_secret }}" placeholder="Your Google OAuth Client Secret">
+                <small style="color: var(--text-muted);">Keep this secret! Never share it publicly</small>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Redirect URI</label>
+            <input type="text" name="google_redirect_uri" class="form-control" value="{{ settings.google_redirect_uri }}" placeholder="http://your-domain.com/auth/google/callback">
+            <small style="color: var(--text-muted);">Must match the redirect URI in Google Cloud Console</small>
+        </div>
+
+        <div class="form-group">
+            <label class="form-checkbox" style="display: flex; align-items: center; gap: 0.5rem;">
+                <input type="checkbox" name="google_auto_register" {% if settings.google_auto_register == '1' %}checked{% endif %}>
+                <span>Allow Auto-Registration</span>
+            </label>
+            <small style="color: var(--text-muted); display: block; margin-top: 0.25rem;">Automatically create accounts for new Google users</small>
+        </div>
+
+        <div style="padding: 1rem; background: var(--bg-secondary); border-radius: 0.5rem; border-left: 3px solid #4285F4;">
+            <p style="margin: 0; font-size: 0.875rem; color: var(--text-muted);">
+                <i class="fas fa-info-circle" style="color: #4285F4;"></i>
+                <strong>Setup Instructions:</strong>
+            </p>
+            <ol style="margin: 0.5rem 0 0 1.5rem; font-size: 0.875rem; color: var(--text-muted);">
+                <li>Go to <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color: #4285F4;">Google Cloud Console</a></li>
+                <li>Create a new project or select an existing one</li>
+                <li>Go to APIs & Services → Credentials</li>
+                <li>Create an OAuth 2.0 Client ID (Web Application type)</li>
+                <li>Add your Redirect URI (e.g., http://your-domain.com/auth/google/callback)</li>
+                <li>Copy Client ID and Client Secret and paste them above</li>
+                <li>Enable the Google+ API in your project</li>
+                <li>Save changes</li>
+            </ol>
+        </div>
+    </div>
+
+    <!-- Discord Bot Settings -->
+    <div class="card" style="margin-bottom: 1.5rem;">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fab fa-discord"></i>
+                Discord Bot (Admin Commands)
+            </h3>
+        </div>
+
+        <div class="form-group">
+            <label class="form-checkbox" style="display: flex; align-items: center; gap: 0.5rem;">
+                <input type="checkbox" name="discord_bot_enabled" {% if settings.discord_bot_enabled == '1' %}checked{% endif %}>
+                <span>Enable Discord Bot</span>
+            </label>
+            <small style="color: var(--text-muted); display: block; margin-top: 0.25rem;">Start the Discord bot for admin commands (deploy VPS, manage users, etc.)</small>
+        </div>
+
+        <div class="grid grid-2">
+            <div class="form-group">
+                <label class="form-label">Bot Token</label>
+                <input type="password" name="discord_bot_token" class="form-control" value="{{ settings.discord_bot_token }}" placeholder="Your Discord Bot Token">
+                <small style="color: var(--text-muted);">Get from Discord Developer Portal → Bot → Token</small>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Server (Guild) ID</label>
+                <input type="text" name="discord_bot_guild_id" class="form-control" value="{{ settings.discord_bot_guild_id }}" placeholder="Discord Server ID">
+                <small style="color: var(--text-muted);">Right-click server → Copy Server ID (Enable Developer Mode)</small>
+            </div>
+        </div>
+
+        <div class="grid grid-2">
+            <div class="form-group">
+                <label class="form-label">Admin Channel ID</label>
+                <input type="text" name="discord_bot_admin_channel" class="form-control" value="{{ settings.discord_bot_admin_channel }}" placeholder="Channel for admin notifications">
+                <small style="color: var(--text-muted);">Channel where deploy notifications are sent</small>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Log Channel ID</label>
+                <input type="text" name="discord_bot_log_channel" class="form-control" value="{{ settings.discord_bot_log_channel }}" placeholder="Channel for bot logs">
+                <small style="color: var(--text-muted);">Channel where bot activity is logged</small>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Command Prefix</label>
+            <input type="text" name="discord_bot_command_prefix" class="form-control" value="{{ settings.discord_bot_command_prefix }}" placeholder="!" style="max-width: 80px;">
+            <small style="color: var(--text-muted);">Default prefix for bot commands (e.g., !deploy, !status)</small>
+        </div>
+
+        <div style="padding: 1rem; background: var(--bg-secondary); border-radius: 0.5rem; border-left: 3px solid #5865F2;">
+            <p style="margin: 0; font-size: 0.875rem; color: var(--text-muted);">
+                <i class="fas fa-info-circle" style="color: #5865F2;"></i>
+                <strong>Bot Commands:</strong>
+            </p>
+            <ul style="margin: 0.5rem 0 0 1.5rem; font-size: 0.875rem; color: var(--text-muted);">
+                <li><code>!deploy</code> — Deploy a new VPS interactively</li>
+                <li><code>!status</code> — View all VPS and node status</li>
+                <li><code>!users</code> — List registered users</li>
+                <li><code>!start &lt;vps_id&gt;</code> — Start a VPS</li>
+                <li><code>!stop &lt;vps_id&gt;</code> — Stop a VPS</li>
+                <li><code>!restart &lt;vps_id&gt;</code> — Restart a VPS</li>
+                <li><code>!delete &lt;vps_id&gt;</code> — Delete a VPS</li>
+                <li><code>!nodes</code> — View node status</li>
+                <li><code>!help</code> — Show all commands</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Submit -->
+    <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save"></i> Save Settings
+        </button>
+    </div>
+</form>
+
+<!-- Hidden file inputs -->
+<input type="file" id="headerIconUpload" accept="image/*" style="display: none;" onchange="uploadFile(this, 'header')">
+<input type="file" id="faviconUpload" accept=".ico,.png" style="display: none;" onchange="uploadFile(this, 'favicon')">
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function uploadFile(input, type) {
+        if (!input.files || !input.files[0]) return;
+
+        const file = input.files[0];
+        const formData = new FormData();
+        formData.append('icon', file);
+
+        showLoading();
+
+        try {
+            const url = type === 'header'
+                ? '/admin/settings/upload-header-icon'
+                : '/admin/settings/upload-favicon';
+
+            const response = await fetch(url, { method: 'POST', body: formData });
+            const result = await response.json();
+
+            if (result.success) {
+                if (type === 'header') {
+                    // Update input
+                    document.getElementById('headerIcon').value = result.path;
+                    // Update live preview
+                    const img = document.getElementById('headerIconImg');
+                    const fallback = document.getElementById('headerIconFallback');
+                    const pathLabel = document.getElementById('headerIconPath');
+                    img.src = result.path;
+                    img.style.display = 'block';
+                    if (fallback) fallback.style.display = 'none';
+                    if (pathLabel) pathLabel.textContent = result.path;
+                    // Reload sidebar logo without full page refresh
+                    document.querySelectorAll('.sidebar .logo img, .admin-sidebar .logo img').forEach(el => {
+                        el.src = result.path + '?t=' + Date.now();
+                    });
+                    showToast('Logo uploaded and applied! Reload to see it in the sidebar.', 'success');
+                } else {
+                    document.getElementById('favicon').value = result.path;
+                    const img = document.getElementById('faviconImg');
+                    const pathLabel = document.getElementById('faviconPath');
+                    img.src = result.path;
+                    img.style.display = 'block';
+                    if (pathLabel) pathLabel.textContent = result.path;
+                    // Update browser tab favicon live
+                    let link = document.querySelector("link[rel~='icon']");
+                    if (!link) { link = document.createElement('link'); link.rel = 'icon'; document.head.appendChild(link); }
+                    link.href = result.path + '?t=' + Date.now();
+                    showToast('Favicon uploaded and applied!', 'success');
+                }
+            } else {
+                showToast(result.error || 'Upload failed', 'danger');
+            }
+        } catch (error) {
+            showToast('Network error: ' + error.message, 'danger');
+        } finally {
+            hideLoading();
+            // Reset input so same file can be re-selected
+            input.value = '';
+        }
+    }
+
+    async function clearLogo(type) {
+        if (!confirm('Remove the custom logo and revert to the default?')) return;
+        const defaultPath = type === 'header' ? '/static/img/logo.svg' : '/static/img/favicon.ico';
+        try {
+            const res = await fetch('/admin/settings/save-single', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key: type === 'header' ? 'header_icon' : 'favicon', value: defaultPath })
+            });
+            const data = await res.json();
+            if (data.success) {
+                if (type === 'header') {
+                    document.getElementById('headerIcon').value = defaultPath;
+                    document.getElementById('headerIconImg').style.display = 'none';
+                    const fb = document.getElementById('headerIconFallback');
+                    if (fb) fb.style.display = 'flex';
+                    document.getElementById('headerIconPath').textContent = 'Default logo restored';
+                }
+                showToast('Logo removed. Page will reload.', 'success');
+                setTimeout(() => location.reload(), 1200);
+            }
+        } catch(e) {
+            showToast('Error: ' + e.message, 'danger');
+        }
+    }
+</script>
+{% endblock %}

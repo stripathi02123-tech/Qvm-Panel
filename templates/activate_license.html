@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Activate — QVM Panel</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --blue:#4f9af5;--purple:#a78bfa;--green:#10b981;
+  --bg:#080a0e;--card:rgba(15,18,24,0.92);
+  --border:rgba(79,154,245,0.18);--text:#e1e9f0;--muted:#6b7280;
+}
+body{
+  font-family:'Inter',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  display:flex;align-items:center;justify-content:center;
+  overflow:hidden;
+}
+
+/* ── Animated background ── */
+.bg-scene{position:fixed;inset:0;z-index:0;pointer-events:none;}
+.bg-scene::before{
+  content:'';position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse 70% 55% at 15% 25%, rgba(79,154,245,0.10) 0%, transparent 60%),
+    radial-gradient(ellipse 55% 45% at 85% 75%, rgba(167,139,250,0.09) 0%, transparent 55%),
+    radial-gradient(ellipse 40% 35% at 50% 50%, rgba(16,185,129,0.04) 0%, transparent 60%),
+    #080a0e;
+}
+/* Floating orbs */
+.orb{position:absolute;border-radius:50%;filter:blur(60px);opacity:0.18;}
+.orb1{width:400px;height:400px;background:var(--blue);top:-100px;left:-100px;animation:drift1 18s ease-in-out infinite;}
+.orb2{width:350px;height:350px;background:var(--purple);bottom:-80px;right:-80px;animation:drift2 22s ease-in-out infinite;}
+.orb3{width:200px;height:200px;background:var(--green);top:50%;left:50%;transform:translate(-50%,-50%);animation:drift3 14s ease-in-out infinite;}
+@keyframes drift1{0%,100%{transform:translate(0,0)}50%{transform:translate(40px,30px)}}
+@keyframes drift2{0%,100%{transform:translate(0,0)}50%{transform:translate(-35px,-25px)}}
+@keyframes drift3{0%,100%{transform:translate(-50%,-50%)}50%{transform:translate(-45%,-55%)}}
+
+/* Grid lines */
+.grid-lines{
+  position:absolute;inset:0;
+  background-image:
+    linear-gradient(rgba(79,154,245,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(79,154,245,0.04) 1px, transparent 1px);
+  background-size:60px 60px;
+}
+
+/* ── Card ── */
+.card{
+  position:relative;z-index:10;
+  width:100%;max-width:480px;
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:24px;
+  padding:3rem 2.5rem;
+  backdrop-filter:blur(24px);
+  -webkit-backdrop-filter:blur(24px);
+  box-shadow:
+    0 0 0 1px rgba(79,154,245,0.08),
+    0 32px 80px rgba(0,0,0,0.7),
+    0 0 60px rgba(79,154,245,0.06);
+  animation:cardIn 0.6s cubic-bezier(0.16,1,0.3,1);
+}
+@keyframes cardIn{from{opacity:0;transform:translateY(32px) scale(0.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+
+/* Glow border sweep */
+.card::before{
+  content:'';position:absolute;inset:-1px;border-radius:25px;
+  background:linear-gradient(135deg,rgba(79,154,245,0.3),transparent 40%,rgba(167,139,250,0.2) 100%);
+  z-index:-1;pointer-events:none;
+}
+
+/* ── Logo ── */
+.logo-wrap{text-align:center;margin-bottom:2.5rem;}
+.logo-svg-wrap{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:80px;height:80px;border-radius:22px;
+  background:linear-gradient(135deg,rgba(79,154,245,0.15),rgba(167,139,250,0.12));
+  border:1px solid rgba(79,154,245,0.25);
+  margin-bottom:1.25rem;
+  box-shadow:0 0 30px rgba(79,154,245,0.2);
+  animation:logoPop 0.7s cubic-bezier(0.16,1,0.3,1) 0.2s both;
+}
+@keyframes logoPop{from{opacity:0;transform:scale(0.7)}to{opacity:1;transform:scale(1)}}
+.logo-title{
+  font-size:1.75rem;font-weight:800;
+  background:linear-gradient(135deg,#e1e9f0 0%,#93c5fd 50%,#a78bfa 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  margin-bottom:0.35rem;letter-spacing:-0.02em;
+}
+.logo-sub{color:var(--muted);font-size:0.9rem;}
+
+/* ── Badge ── */
+.key-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:5px 14px;border-radius:20px;font-size:0.75rem;font-weight:600;
+  background:linear-gradient(135deg,rgba(79,154,245,0.15),rgba(167,139,250,0.12));
+  border:1px solid rgba(79,154,245,0.25);color:#93c5fd;
+  margin-bottom:1.5rem;
+}
+
+/* ── Form ── */
+.form-label{display:block;font-size:0.85rem;font-weight:600;color:#a0a8b5;margin-bottom:0.5rem;}
+.input-wrap{position:relative;}
+.input-wrap i{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:0.9rem;}
+.key-input{
+  width:100%;padding:0.85rem 1rem 0.85rem 2.75rem;
+  background:rgba(10,12,16,0.7);
+  border:1px solid rgba(42,46,52,0.9);
+  border-radius:12px;color:var(--text);
+  font-family:'Courier New',monospace;font-size:0.95rem;letter-spacing:0.05em;
+  transition:border-color 0.2s,box-shadow 0.2s;outline:none;
+}
+.key-input:focus{
+  border-color:rgba(79,154,245,0.5);
+  box-shadow:0 0 0 3px rgba(79,154,245,0.12),0 0 20px rgba(79,154,245,0.08);
+}
+.key-input::placeholder{color:var(--muted);font-family:'Inter',sans-serif;letter-spacing:0;}
+
+/* ── Button ── */
+.btn-activate{
+  width:100%;margin-top:1.5rem;padding:0.9rem;
+  background:linear-gradient(135deg,#4f9af5 0%,#6366f1 50%,#a78bfa 100%);
+  background-size:200% 200%;
+  border:none;border-radius:12px;color:#fff;
+  font-size:1rem;font-weight:700;cursor:pointer;
+  transition:transform 0.2s,box-shadow 0.2s,background-position 0.4s;
+  box-shadow:0 4px 20px rgba(79,154,245,0.3);
+  position:relative;overflow:hidden;
+}
+.btn-activate::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.08),transparent);
+  transform:translateX(-100%);transition:transform 0.5s ease;
+}
+.btn-activate:hover::after{transform:translateX(100%);}
+.btn-activate:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(79,154,245,0.45);background-position:right center;}
+.btn-activate:active{transform:translateY(0);}
+.btn-activate:disabled{opacity:0.6;cursor:not-allowed;transform:none;}
+
+/* ── Alert ── */
+.alert{
+  margin-top:1rem;padding:0.85rem 1rem;border-radius:10px;
+  font-size:0.875rem;display:flex;align-items:center;gap:0.6rem;
+  animation:alertIn 0.3s ease;
+}
+@keyframes alertIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.alert-success{background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);color:#6ee7b7;}
+.alert-danger{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#fca5a5;}
+
+/* ── Features ── */
+.features{
+  margin-top:2rem;padding-top:1.5rem;
+  border-top:1px solid rgba(42,46,52,0.6);
+}
+.features-title{font-size:0.8rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:1rem;}
+.feature-item{
+  display:flex;align-items:center;gap:0.75rem;
+  padding:0.5rem 0;font-size:0.85rem;color:#a0a8b5;
+}
+.feature-item i{color:var(--blue);width:16px;font-size:0.8rem;}
+
+/* ── Footer ── */
+.page-footer{
+  position:fixed;bottom:1.5rem;left:0;right:0;
+  text-align:center;font-size:0.75rem;color:var(--muted);z-index:10;
+}
+</style>
+</head>
+<body>
+
+<div class="bg-scene">
+  <div class="grid-lines"></div>
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+  <div class="orb orb3"></div>
+</div>
+
+<div class="card">
+  <div class="logo-wrap">
+    <div class="logo-svg-wrap">
+      <svg width="44" height="44" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="lg1" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#4f9af5"/>
+            <stop offset="100%" stop-color="#a78bfa"/>
+          </linearGradient>
+        </defs>
+        <path d="M18 2 L32 10 L32 26 L18 34 L4 26 L4 10 Z" fill="url(#lg1)" opacity="0.15"/>
+        <path d="M18 2 L32 10 L32 26 L18 34 L4 26 L4 10 Z" stroke="url(#lg1)" stroke-width="1.5" fill="none"/>
+        <path d="M11 25 L18 11 L25 25" stroke="url(#lg1)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <path d="M13.5 20.5 L22.5 20.5" stroke="url(#lg1)" stroke-width="1.8" stroke-linecap="round"/>
+        <circle cx="18" cy="11" r="1.5" fill="url(#lg1)"/>
+      </svg>
+    </div>
+    <div class="logo-title">QVM Panel 🚀</div>
+    <div class="logo-sub">Premium VPS Management Platform</div>
+  </div>
+
+  <div style="text-align:center;">
+    <div class="key-badge"><i class="fas fa-shield-alt"></i> License Activation Required</div>
+  </div>
+
+  <form id="licenseForm">
+    <div style="margin-bottom:1rem;">
+      <label class="form-label">🔑 License Key</label>
+      <div class="input-wrap">
+        <i class="fas fa-key"></i>
+        <input type="text" class="key-input" id="licenseKey" name="license_key"
+          placeholder="XXXX-XXXX-XXXX-XXXX" required autocomplete="off" spellcheck="false">
+      </div>
+    </div>
+
+    <div id="alertBox"></div>
+
+    <button type="submit" class="btn-activate" id="activateBtn">
+      <span id="btnText"><i class="fas fa-unlock-alt"></i> &nbsp;Activate Panel</span>
+      <span id="btnSpinner" style="display:none;">
+        <i class="fas fa-circle-notch fa-spin"></i> &nbsp;Activating...
+      </span>
+    </button>
+  </form>
+
+  <div class="features">
+    <div class="features-title">✨ What's included</div>
+    <div class="feature-item"><i class="fas fa-check-circle"></i> Full VPS management &amp; orchestration</div>
+    <div class="feature-item"><i class="fas fa-check-circle"></i> Multi-node support &amp; monitoring</div>
+    <div class="feature-item"><i class="fas fa-check-circle"></i> AI assistant &amp; smart automation</div>
+    <div class="feature-item"><i class="fas fa-check-circle"></i> Advanced security &amp; protection</div>
+    <div class="feature-item"><i class="fas fa-check-circle"></i> Theme system &amp; full customization</div>
+    <div class="feature-item"><i class="fas fa-check-circle"></i> REST API &amp; integrations</div>
+  </div>
+</div>
+
+<div class="page-footer">Powered by QVM Panel &copy; QVM Panel 2026 | Version 1.0</div>
+
+<script>
+document.getElementById('licenseForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const key = document.getElementById('licenseKey').value.trim();
+  const btn = document.getElementById('activateBtn');
+  const btnText = document.getElementById('btnText');
+  const btnSpinner = document.getElementById('btnSpinner');
+  const alertBox = document.getElementById('alertBox');
+
+  alertBox.innerHTML = '';
+  btn.disabled = true;
+  btnText.style.display = 'none';
+  btnSpinner.style.display = 'inline';
+
+  try {
+    const fd = new FormData();
+    fd.append('license_key', key);
+    const res = await fetch('/activate', { method: 'POST', body: fd });
+    const data = await res.json();
+
+    if (data.success) {
+      alertBox.innerHTML = `<div class="alert alert-success"><i class="fas fa-check-circle"></i> ${data.message} Redirecting...</div>`;
+      setTimeout(() => window.location.href = '/', 1800);
+    } else {
+      alertBox.innerHTML = `<div class="alert alert-danger"><i class="fas fa-times-circle"></i> ${data.error}</div>`;
+      btn.disabled = false;
+      btnText.style.display = 'inline';
+      btnSpinner.style.display = 'none';
+    }
+  } catch {
+    alertBox.innerHTML = `<div class="alert alert-danger"><i class="fas fa-times-circle"></i> Connection error. Please try again.</div>`;
+    btn.disabled = false;
+    btnText.style.display = 'inline';
+    btnSpinner.style.display = 'none';
+  }
+});
+</script>
+</body>
+</html>

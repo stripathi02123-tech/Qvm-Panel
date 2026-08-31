@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ panel_name }} · noVNC Console — {{ vps.hostname or vps.container_name }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        :root {
+            --bg-dark: #0c1018;
+            --bg-darker: #080b10;
+            --border-color: #1a2030;
+            --accent: #10b981;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: var(--bg-darker);
+            color: #e1e9f0;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* ── Top Bar ── */
+        .topbar {
+            background: #0e1218;
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.5rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-shrink: 0;
+            z-index: 100;
+        }
+        .topbar-brand {
+            display: flex; align-items: center; gap: 0.5rem;
+            font-weight: 700; font-size: 0.9rem;
+            color: var(--accent);
+        }
+        .topbar-brand i { font-size: 1rem; }
+        .topbar-vps {
+            background: #141820;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            border-left: 3px solid var(--accent);
+        }
+        .topbar-vps i { color: var(--accent); margin-right: 4px; }
+        .topbar-status {
+            display: flex; align-items: center; gap: 0.5rem;
+            margin-left: auto;
+            font-size: 0.8rem;
+        }
+        .status-led {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: #6c757d;
+        }
+        .status-led.connected { background: #10b981; box-shadow: 0 0 8px rgba(16,185,129,0.5); }
+        .status-led.disconnected { background: #ef4444; }
+        .status-led.connecting { background: #f59e0b; animation: blink 1s infinite; }
+        @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+        .topbar-actions { display: flex; gap: 0.5rem; }
+        .topbar-btn {
+            background: #1a2030;
+            border: 1px solid var(--border-color);
+            color: #a0bef0;
+            padding: 0.3rem 0.6rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: all 0.2s;
+        }
+        .topbar-btn:hover { background: #222838; color: #e1e9f0; }
+        .topbar-btn.active { background: rgba(16,185,129,0.15); border-color: rgba(16,185,129,0.4); color: var(--accent); }
+
+        /* ── VNC Container ── */
+        .vnc-wrapper {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-darker);
+            position: relative;
+        }
+        #vnc-canvas {
+            background: #000;
+            image-rendering: pixelated;
+        }
+
+        /* ── Login Overlay ── */
+        .login-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(8,11,16,0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+        }
+        .login-card {
+            background: #0e1218;
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 2rem;
+            width: 420px;
+            max-width: 95vw;
+        }
+        .login-card h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .login-card h3 i { color: var(--accent); }
+        .login-field {
+            margin-bottom: 1rem;
+        }
+        .login-field label {
+            display: block;
+            font-size: 0.75rem;
+            color: rgba(160,190,240,0.5);
+            margin-bottom: 0.3rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .login-field input {
+            width: 100%;
+            background: #080b10;
+            border: 1px solid #1a2030;
+            border-radius: 8px;
+            color: #e1e9f0;
+            padding: 0.6rem 0.8rem;
+            font-family: monospace;
+            font-size: 0.85rem;
+            transition: border-color 0.2s;
+        }
+        .login-field input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        .login-btn {
+            width: 100%;
+            padding: 0.7rem;
+            border: none;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 0.5rem;
+        }
+        .login-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(16,185,129,0.3); }
+
+        /* ── Resize Handle ── */
+        .resize-handle {
+            position: absolute;
+            bottom: 0; right: 0;
+            width: 20px; height: 20px;
+            cursor: nwse-resize;
+            opacity: 0.3;
+        }
+
+        /* ── Fullscreen ── */
+        .vnc-wrapper.fullscreen {
+            position: fixed; inset: 0; z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Bar -->
+    <div class="topbar">
+        <a href="{{ url_for('vps_detail', vps_id=vps.id) }}" class="topbar-brand">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+        <div class="topbar-vps">
+            <i class="fas fa-desktop"></i>
+            {{ vps.hostname or vps.container_name }} — noVNC
+        </div>
+        <div class="topbar-status">
+            <div class="status-led" id="connLed"></div>
+            <span id="connText">Disconnected</span>
+        </div>
+        <div class="topbar-actions">
+            <button class="topbar-btn" onclick="sendCtrlAltDel()" title="Send Ctrl+Alt+Del">
+                <i class="fas fa-keyboard"></i> Ctrl+Alt+Del
+            </button>
+            <button class="topbar-btn" onclick="toggleFullscreen()" title="Fullscreen">
+                <i class="fas fa-expand"></i>
+            </button>
+            <button class="topbar-btn" onclick="clipboardCopy()" title="Clipboard">
+                <i class="fas fa-clipboard"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Login Overlay -->
+    <div class="login-overlay" id="loginOverlay">
+        <div class="login-card">
+            <h3><i class="fas fa-desktop"></i> Connect to Virtual Machine</h3>
+            <div class="login-field">
+                <label>VNC Host</label>
+                <input type="text" id="vncHost" value="{{ vps_ip }}" placeholder="VM IP address or hostname">
+            </div>
+            <div class="login-field">
+                <label>VNC Port</label>
+                <input type="number" id="vncPort" value="5900" min="5900" max="5999">
+            </div>
+            <div class="login-field">
+                <label>SSH User (for tunnel)</label>
+                <input type="text" id="sshUser" value="root">
+            </div>
+            <div class="login-field">
+                <label>SSH Password</label>
+                <input type="password" id="sshPass" value="{{ root_password }}" placeholder="Root password">
+            </div>
+            <button class="login-btn" onclick="connectVNC()">
+                <i class="fas fa-plug"></i> Connect
+            </button>
+            <div style="margin-top:1rem;text-align:center;font-size:0.75rem;color:rgba(160,190,240,0.4);">
+                <i class="fas fa-shield-alt"></i> Connection is encrypted end-to-end
+            </div>
+        </div>
+    </div>
+
+    <!-- VNC Display Area -->
+    <div class="vnc-wrapper" id="vncWrapper">
+        <div id="vncContainer" style="position:relative;">
+            <canvas id="vncCanvas"></canvas>
+            <div class="resize-handle" id="resizeHandle"></div>
+        </div>
+    </div>
+
+    <!-- Clipboard Modal -->
+    <div id="clipboardModal" style="display:none; position:fixed; inset:0; z-index:500; background:rgba(8,11,16,0.9); align-items:center; justify-content:center;">
+        <div style="background:#0e1218; border:1px solid var(--border-color); border-radius:12px; padding:1.5rem; width:400px;">
+            <h4 style="font-size:0.95rem; margin-bottom:1rem;"><i class="fas fa-clipboard" style="color:var(--accent);"></i> Clipboard Sync</h4>
+            <textarea id="clipboardText" style="width:100%; height:120px; background:#080b10; border:1px solid #1a2030; border-radius:8px; color:#e1e9f0; font-family:monospace; font-size:0.8rem; padding:0.5rem; resize:vertical;"></textarea>
+            <div style="display:flex; gap:0.5rem; margin-top:0.75rem; justify-content:flex-end;">
+                <button class="topbar-btn" onclick="document.getElementById('clipboardModal').style.display='none'">Cancel</button>
+                <button class="topbar-btn active" onclick="sendClipboard()">Send to VM</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    const socket = io();
+    const loginOverlay = document.getElementById('loginOverlay');
+    const connLed = document.getElementById('connLed');
+    const connText = document.getElementById('connText');
+    const canvas = document.getElementById('vncCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let connected = false;
+    let vncSocket = null;
+
+    function setConnStatus(status) {
+        connLed.className = 'status-led ' + status;
+        const labels = { connected: 'Connected', disconnected: 'Disconnected', connecting: 'Connecting…' };
+        connText.textContent = labels[status] || status;
+    }
+
+    function connectVNC() {
+        const host = document.getElementById('vncHost').value;
+        const port = document.getElementById('vncPort').value;
+        const user = document.getElementById('sshUser').value;
+        const pass = document.getElementById('sshPass').value;
+
+        if (!host) { showToast('Please enter host', 'warning'); return; }
+
+        loginOverlay.style.display = 'none';
+        setConnStatus('connecting');
+
+        // Use WebSocket proxy through the panel
+        socket.emit('novnc_connect', {
+            vps_id: {{ vps.id }},
+            host: host,
+            port: parseInt(port),
+            user: user,
+            password: pass
+        });
+
+        socket.on('novnc_connected', function(data) {
+            setConnStatus('connected');
+            connected = true;
+            startVNCStream();
+        });
+
+        socket.on('novnc_frame', function(data) {
+            if (data && data.image) {
+                const img = new Image();
+                img.onload = function() {
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                };
+                img.src = 'data:image/jpeg;base64,' + data.image;
+            }
+        });
+
+        socket.on('novnc_error', function(data) {
+            setConnStatus('disconnected');
+            showToast('Connection error: ' + (data.error || 'Unknown'), 'danger');
+        });
+
+        socket.on('novnc_disconnected', function() {
+            setConnStatus('disconnected');
+            connected = false;
+        });
+    }
+
+    function startVNCStream() {
+        socket.emit('novnc_start_stream', { vps_id: {{ vps.id }} });
+    }
+
+    function sendCtrlAltDel() {
+        socket.emit('novnc_key', { vps_id: {{ vps.id }}, keys: ['Control', 'Alt', 'Delete'] });
+    }
+
+    function toggleFullscreen() {
+        const wrapper = document.getElementById('vncWrapper');
+        wrapper.classList.toggle('fullscreen');
+    }
+
+    function clipboardCopy() {
+        document.getElementById('clipboardModal').style.display = 'flex';
+    }
+
+    function sendClipboard() {
+        const text = document.getElementById('clipboardText').value;
+        socket.emit('novnc_clipboard', { vps_id: {{ vps.id }}, text: text });
+        document.getElementById('clipboardModal').style.display = 'none';
+        showToast('Clipboard sent to VM', 'success');
+    }
+
+    // Keyboard input
+    document.addEventListener('keydown', function(e) {
+        if (!connected) return;
+        e.preventDefault();
+        socket.emit('novnc_key', { vps_id: {{ vps.id }}, key: e.key, code: e.code });
+    });
+
+    canvas.addEventListener('click', function(e) {
+        if (!connected) return;
+        const rect = canvas.getBoundingClientRect();
+        const x = Math.round((e.clientX - rect.left) * (canvas.width / rect.width));
+        const y = Math.round((e.clientY - rect.top) * (canvas.height / rect.height));
+        socket.emit('novnc_mouse', { vps_id: {{ vps.id }}, x: x, y: y, button: e.button });
+    });
+
+    // Placeholder VNC display when not connected
+    if (!connected) {
+        canvas.width = 1024;
+        canvas.height = 768;
+        ctx.fillStyle = '#0c1018';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = 'rgba(16,185,129,0.3)';
+        ctx.font = '24px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('noVNC — Virtual Machine Console', canvas.width/2, canvas.height/2 - 20);
+        ctx.font = '14px monospace';
+        ctx.fillText('Enter VNC connection details above to connect', canvas.width/2, canvas.height/2 + 20);
+        ctx.fillStyle = 'rgba(16,185,129,0.15)';
+        ctx.fillText('Desktop-like access powered by QEMU/KVM', canvas.width/2, canvas.height/2 + 50);
+    }
+
+    function showToast(msg, type) {
+        if (typeof window.showToast === 'function') {
+            window.showToast(msg, type);
+        } else {
+            alert(msg);
+        }
+    }
+    </script>
+</body>
+</html>

@@ -1,0 +1,701 @@
+{% extends "base.html" %}
+{% block title %}Sign In — {{ panel_name }}{% endblock %}
+
+{% block content %}
+<style>
+/* ══════════════════════════════════════════════
+   RESET & FOUNDATION
+══════════════════════════════════════════════ */
+body{background:#020408!important;overflow-x:hidden;}
+.theme-bg-overlay,.sidebar,.header,.footer{display:none!important;}
+.main-content{margin-left:0!important;padding:0!important;}
+
+/* ══════════════════════════════════════════════
+   CINEMATIC BACKGROUND
+══════════════════════════════════════════════ */
+#avm-bg{
+  position:fixed;inset:0;z-index:0;
+  background:radial-gradient(ellipse 120% 80% at 20% 20%, rgba(10,25,60,0.95) 0%, transparent 55%),
+             radial-gradient(ellipse 100% 70% at 80% 80%, rgba(25,10,50,0.95) 0%, transparent 60%),
+             radial-gradient(ellipse 80% 100% at 50% 50%, rgba(5,15,35,1) 0%, transparent 80%),
+             #020408;
+}
+
+/* Star field */
+#starfield{position:fixed;inset:0;z-index:1;}
+
+/* Aurora layers */
+#aurora{position:fixed;inset:0;z-index:2;pointer-events:none;overflow:hidden;}
+.aurora-band{
+  position:absolute;border-radius:50%;filter:blur(80px);mix-blend-mode:screen;
+  animation:auroraDrift linear infinite;
+}
+.a1{width:900px;height:400px;background:rgba(30,120,255,0.18);top:10%;left:-20%;animation-duration:28s;animation-delay:0s;}
+.a2{width:700px;height:350px;background:rgba(120,50,255,0.15);top:30%;right:-15%;animation-duration:35s;animation-delay:-12s;}
+.a3{width:800px;height:300px;background:rgba(0,200,180,0.10);top:60%;left:10%;animation-duration:22s;animation-delay:-7s;}
+.a4{width:600px;height:400px;background:rgba(255,80,150,0.08);bottom:-5%;right:20%;animation-duration:40s;animation-delay:-20s;}
+@keyframes auroraDrift{
+  0%{transform:translateX(0) translateY(0) scale(1) rotate(0deg);}
+  25%{transform:translateX(80px) translateY(-40px) scale(1.05) rotate(2deg);}
+  50%{transform:translateX(40px) translateY(60px) scale(0.95) rotate(-1deg);}
+  75%{transform:translateX(-60px) translateY(20px) scale(1.08) rotate(3deg);}
+  100%{transform:translateX(0) translateY(0) scale(1) rotate(0deg);}
+}
+
+/* Floating grid */
+#grid-overlay{
+  position:fixed;inset:0;z-index:3;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(30,100,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(30,100,255,0.04) 1px, transparent 1px);
+  background-size:60px 60px;
+  animation:gridScroll 20s linear infinite;
+  mask-image:radial-gradient(ellipse 70% 80% at 50% 50%, black 30%, transparent 100%);
+}
+@keyframes gridScroll{0%{transform:translate(0,0);}100%{transform:translate(60px,60px);}}
+
+/* Mouse Parallax Orbs */
+#orbs{position:fixed;inset:0;z-index:2;pointer-events:none;}
+.orb{
+  position:absolute;border-radius:50%;
+  transition:transform 0.8s cubic-bezier(0.25,0.1,0.25,1);
+}
+.orb1{width:600px;height:600px;background:radial-gradient(circle, rgba(30,80,255,0.15) 0%, transparent 70%);top:-100px;left:-100px;}
+.orb2{width:500px;height:500px;background:radial-gradient(circle, rgba(120,40,255,0.12) 0%, transparent 70%);bottom:-100px;right:-100px;}
+.orb3{width:400px;height:400px;background:radial-gradient(circle, rgba(0,200,160,0.08) 0%, transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);}
+
+/* Particle canvas */
+#particle-canvas{position:fixed;inset:0;z-index:4;pointer-events:none;}
+
+/* ══════════════════════════════════════════════
+   LAYOUT WRAPPER
+══════════════════════════════════════════════ */
+.auth-scene{position:relative;z-index:10;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem;}
+
+/* ══════════════════════════════════════════════
+   HOLOGRAPHIC CARD
+══════════════════════════════════════════════ */
+.auth-card{
+  width:100%;max-width:460px;
+  background:rgba(8,14,30,0.85);
+  border-radius:28px;
+  padding:3rem 2.75rem;
+  position:relative;overflow:hidden;
+  backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);
+  border:1px solid rgba(60,120,255,0.25);
+  box-shadow:
+    0 0 0 1px rgba(60,120,255,0.12),
+    0 0 40px rgba(30,80,255,0.15),
+    0 0 80px rgba(100,40,255,0.10),
+    0 60px 120px rgba(0,0,0,0.8);
+  animation:cardReveal 0.8s cubic-bezier(0.16,1,0.3,1) both;
+}
+@keyframes cardReveal{
+  from{opacity:0;transform:translateY(40px) scale(0.95);}
+  to{opacity:1;transform:translateY(0) scale(1);}
+}
+
+/* Holographic shimmer border */
+.auth-card::before{
+  content:'';position:absolute;inset:-1px;border-radius:29px;
+  background:conic-gradient(from 0deg,
+    rgba(30,100,255,0) 0%,
+    rgba(30,100,255,0.5) 15%,
+    rgba(120,40,255,0.5) 30%,
+    rgba(0,200,180,0.4) 45%,
+    rgba(30,100,255,0) 60%,
+    rgba(255,80,200,0.3) 75%,
+    rgba(30,100,255,0) 100%);
+  z-index:-1;
+  animation:holoBorder 5s linear infinite;
+  mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite:exclude;
+  -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite:xor;
+  padding:1px;
+}
+@keyframes holoBorder{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
+
+/* Card inner glow */
+.auth-card::after{
+  content:'';position:absolute;inset:0;border-radius:28px;pointer-events:none;
+  background:radial-gradient(ellipse 80% 40% at 50% 0%, rgba(30,100,255,0.08) 0%, transparent 70%);
+}
+
+/* Scan line effect */
+.card-scanline{
+  position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg, transparent, rgba(30,120,255,0.6), rgba(120,40,255,0.4), transparent);
+  animation:scanDown 4s ease-in-out infinite;z-index:1;border-radius:28px 28px 0 0;
+}
+@keyframes scanDown{
+  0%{top:0;opacity:0;}
+  5%{opacity:1;}
+  45%{opacity:0.5;}
+  50%{top:100%;opacity:0;}
+  100%{top:100%;opacity:0;}
+}
+
+/* ══════════════════════════════════════════════
+   LOGO SECTION
+══════════════════════════════════════════════ */
+.auth-logo{text-align:center;margin-bottom:2.5rem;position:relative;z-index:2;}
+
+.logo-ring-container{
+  position:relative;display:inline-flex;align-items:center;justify-content:center;
+  width:90px;height:90px;margin-bottom:1.5rem;
+}
+.logo-ring{
+  position:absolute;inset:0;border-radius:50%;
+  border:2px solid transparent;
+  background:conic-gradient(from 0deg, rgba(30,100,255,0.8), rgba(120,40,255,0.6), rgba(0,200,180,0.5), rgba(30,100,255,0.8)) border-box;
+  -webkit-mask:linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite:xor;
+  mask:linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+  mask-composite:exclude;
+  animation:ringRotate 4s linear infinite;
+}
+@keyframes ringRotate{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
+.logo-ring-2{
+  position:absolute;inset:6px;border-radius:50%;
+  border:1px solid rgba(120,40,255,0.3);
+  animation:ringRotate 6s linear infinite reverse;
+}
+.logo-icon-bg{
+  width:72px;height:72px;border-radius:50%;
+  background:linear-gradient(135deg, rgba(30,60,140,0.9), rgba(60,20,120,0.9));
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 0 30px rgba(30,100,255,0.4), 0 0 60px rgba(120,40,255,0.3), inset 0 0 20px rgba(30,100,255,0.1);
+  position:relative;z-index:1;
+  animation:iconPulse 3s ease-in-out infinite;
+}
+@keyframes iconPulse{
+  0%,100%{box-shadow:0 0 30px rgba(30,100,255,0.4), 0 0 60px rgba(120,40,255,0.3), inset 0 0 20px rgba(30,100,255,0.1);}
+  50%{box-shadow:0 0 50px rgba(30,100,255,0.7), 0 0 100px rgba(120,40,255,0.5), inset 0 0 35px rgba(30,100,255,0.2);}
+}
+
+.auth-title{
+  font-size:1.8rem;font-weight:800;letter-spacing:-0.03em;
+  background:linear-gradient(135deg, #ffffff 0%, #93c5fd 40%, #c4b5fd 70%, #67e8f9 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  margin-bottom:0.4rem;line-height:1.2;
+  animation:titleShine 4s ease-in-out infinite;
+  background-size:200% auto;
+}
+@keyframes titleShine{
+  0%{background-position:0% center;}
+  50%{background-position:100% center;}
+  100%{background-position:0% center;}
+}
+.auth-sub{
+  color:rgba(140,160,200,0.8);font-size:0.875rem;font-weight:400;
+  animation:subFade 1s ease 0.5s both;
+}
+@keyframes subFade{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+/* ══════════════════════════════════════════════
+   TYPE INDICATOR (cursor blink on title)
+══════════════════════════════════════════════ */
+.type-cursor{
+  display:inline-block;width:2px;height:1.4em;background:#93c5fd;
+  margin-left:3px;vertical-align:middle;animation:blink 0.9s step-end infinite;
+}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0;}}
+
+/* ══════════════════════════════════════════════
+   FORM ELEMENTS
+══════════════════════════════════════════════ */
+.f-group{margin-bottom:1.25rem;position:relative;z-index:2;}
+.f-label{
+  display:block;font-size:0.8rem;font-weight:600;
+  color:rgba(120,160,220,0.9);margin-bottom:0.5rem;
+  letter-spacing:0.06em;text-transform:uppercase;
+}
+.f-input-wrap{position:relative;}
+.f-ico{
+  position:absolute;left:14px;top:50%;transform:translateY(-50%);
+  color:rgba(80,120,200,0.7);font-size:0.88rem;pointer-events:none;
+  transition:color 0.3s;
+}
+.f-input{
+  width:100%;padding:0.9rem 1rem 0.9rem 2.75rem;
+  background:rgba(5,10,25,0.7);
+  border:1px solid rgba(40,80,200,0.2);
+  border-radius:14px;color:#e2e8f0;
+  font-size:0.9rem;font-family:'Inter',sans-serif;
+  transition:all 0.3s ease;outline:none;
+  box-shadow:inset 0 1px 3px rgba(0,0,0,0.3);
+}
+.f-input::placeholder{color:rgba(80,100,140,0.6);}
+.f-input:focus{
+  border-color:rgba(60,120,255,0.6);
+  background:rgba(8,16,40,0.85);
+  box-shadow:0 0 0 3px rgba(30,100,255,0.12), 0 0 20px rgba(30,100,255,0.08), inset 0 1px 3px rgba(0,0,0,0.3);
+}
+.f-input:focus + .f-ico, .f-input-wrap:focus-within .f-ico{color:rgba(80,160,255,0.9);}
+
+/* Password toggle */
+.pwd-toggle{
+  position:absolute;right:14px;top:50%;transform:translateY(-50%);
+  color:rgba(80,120,200,0.6);cursor:pointer;font-size:0.85rem;
+  transition:color 0.2s;background:none;border:none;padding:2px;
+}
+.pwd-toggle:hover{color:rgba(120,180,255,0.9);}
+
+/* ══════════════════════════════════════════════
+   CHECKBOX ROW
+══════════════════════════════════════════════ */
+.auth-row{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:1.5rem;position:relative;z-index:2;
+}
+.custom-cb{display:flex;align-items:center;gap:0.6rem;cursor:pointer;}
+.custom-cb input{
+  width:16px;height:16px;accent-color:#3b82f6;cursor:pointer;
+  border-radius:4px;
+}
+.custom-cb span{font-size:0.83rem;color:rgba(110,130,170,0.9);}
+.f-link{
+  font-size:0.83rem;color:rgba(80,160,255,0.9);text-decoration:none;font-weight:500;
+  transition:color 0.2s;
+}
+.f-link:hover{color:#93c5fd;}
+
+/* ══════════════════════════════════════════════
+   SUBMIT BUTTON
+══════════════════════════════════════════════ */
+.btn-auth{
+  width:100%;padding:1rem;margin-top:0.25rem;
+  background:linear-gradient(135deg, #1e4fff 0%, #5b21b6 50%, #0ea5e9 100%);
+  background-size:200% 200%;
+  border:none;border-radius:14px;color:#fff;
+  font-size:0.95rem;font-weight:700;letter-spacing:0.02em;
+  cursor:pointer;position:relative;overflow:hidden;z-index:2;
+  transition:transform 0.3s, box-shadow 0.3s, background-position 0.5s;
+  box-shadow:0 0 20px rgba(30,80,255,0.4), 0 0 40px rgba(90,40,200,0.3), 0 8px 30px rgba(0,0,0,0.4);
+  animation:btnGlow 3s ease-in-out infinite;
+}
+@keyframes btnGlow{
+  0%,100%{box-shadow:0 0 20px rgba(30,80,255,0.4), 0 0 40px rgba(90,40,200,0.3), 0 8px 30px rgba(0,0,0,0.4);}
+  50%{box-shadow:0 0 35px rgba(30,80,255,0.7), 0 0 70px rgba(90,40,200,0.5), 0 8px 30px rgba(0,0,0,0.4);}
+}
+.btn-auth::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.15) 50%, transparent 60%);
+  transform:translateX(-100%);transition:transform 0.6s ease;
+}
+.btn-auth:hover::before{transform:translateX(100%);}
+.btn-auth:hover{
+  transform:translateY(-3px) scale(1.01);
+  background-position:right center;
+  box-shadow:0 0 40px rgba(30,80,255,0.65), 0 0 80px rgba(90,40,200,0.45), 0 16px 40px rgba(0,0,0,0.5);
+}
+.btn-auth:active{transform:translateY(-1px) scale(0.99);}
+.btn-inner{display:flex;align-items:center;justify-content:center;gap:0.6rem;}
+
+/* ══════════════════════════════════════════════
+   DIVIDER & DISCORD
+══════════════════════════════════════════════ */
+.auth-divider{
+  display:flex;align-items:center;gap:0.75rem;margin:1.5rem 0;
+  position:relative;z-index:2;
+}
+.auth-divider::before,.auth-divider::after{
+  content:'';flex:1;height:1px;
+  background:linear-gradient(90deg, transparent, rgba(40,80,160,0.3), transparent);
+}
+.auth-divider span{color:rgba(80,110,160,0.8);font-size:0.8rem;font-weight:500;white-space:nowrap;}
+
+.btn-discord{
+  display:flex;align-items:center;justify-content:center;gap:0.65rem;
+  width:100%;padding:0.85rem;
+  background:rgba(88,101,242,0.15);
+  border:1px solid rgba(88,101,242,0.35);
+  border-radius:14px;color:#fff;font-weight:600;font-size:0.9rem;
+  text-decoration:none;cursor:pointer;position:relative;z-index:2;
+  transition:all 0.3s ease;
+  box-shadow:0 0 15px rgba(88,101,242,0.2);
+}
+.btn-discord:hover{
+  background:rgba(88,101,242,0.25);
+  border-color:rgba(88,101,242,0.6);
+  transform:translateY(-2px);
+  box-shadow:0 0 25px rgba(88,101,242,0.4);
+  color:#fff;
+}
+.btn-google{
+  display:flex;align-items:center;justify-content:center;gap:0.65rem;
+  width:100%;padding:0.85rem;
+  background:rgba(66,133,244,0.12);
+  border:1px solid rgba(66,133,244,0.35);
+  border-radius:14px;color:#fff;font-weight:600;font-size:0.9rem;
+  text-decoration:none;cursor:pointer;position:relative;z-index:2;
+  transition:all 0.3s ease;
+  box-shadow:0 0 15px rgba(66,133,244,0.15);
+}
+.btn-google:hover{
+  background:rgba(66,133,244,0.22);
+  border-color:rgba(66,133,244,0.55);
+  transform:translateY(-2px);
+  box-shadow:0 0 25px rgba(66,133,244,0.3);
+  color:#fff;
+}
+
+/* ══════════════════════════════════════════════
+   ALERTS
+══════════════════════════════════════════════ */
+.auth-alert{
+  padding:0.8rem 1.1rem;border-radius:12px;margin-bottom:1.25rem;
+  font-size:0.85rem;display:flex;align-items:center;gap:0.65rem;
+  animation:alertSlide 0.4s cubic-bezier(0.16,1,0.3,1);
+  position:relative;z-index:2;
+}
+@keyframes alertSlide{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
+.auth-alert-danger{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#fca5a5;}
+.auth-alert-success{background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);color:#6ee7b7;}
+.auth-alert-warning{background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);color:#fcd34d;}
+
+/* ══════════════════════════════════════════════
+   FOOTER
+══════════════════════════════════════════════ */
+.auth-footer{
+  text-align:center;margin-top:2rem;padding-top:1.5rem;
+  border-top:1px solid rgba(30,60,120,0.2);position:relative;z-index:2;
+}
+.auth-footer p{color:rgba(90,120,170,0.8);font-size:0.875rem;}
+.auth-footer a{color:rgba(100,160,255,0.9);text-decoration:none;font-weight:600;transition:color 0.2s;}
+.auth-footer a:hover{color:#93c5fd;}
+.brand-tag{
+  text-align:center;margin-top:1.25rem;font-size:0.7rem;
+  color:rgba(50,80,130,0.6);position:relative;z-index:2;letter-spacing:0.04em;
+}
+
+/* ══════════════════════════════════════════════
+   FLOATING BADGES (corner accents)
+══════════════════════════════════════════════ */
+.corner-badge{
+  position:absolute;z-index:3;pointer-events:none;
+}
+.cb-tl{top:-1px;left:-1px;width:30px;height:30px;border-top:2px solid rgba(30,120,255,0.7);border-left:2px solid rgba(30,120,255,0.7);border-radius:28px 0 0 0;}
+.cb-tr{top:-1px;right:-1px;width:30px;height:30px;border-top:2px solid rgba(120,40,255,0.7);border-right:2px solid rgba(120,40,255,0.7);border-radius:0 28px 0 0;}
+.cb-bl{bottom:-1px;left:-1px;width:30px;height:30px;border-bottom:2px solid rgba(0,180,180,0.5);border-left:2px solid rgba(0,180,180,0.5);border-radius:0 0 0 28px;}
+.cb-br{bottom:-1px;right:-1px;width:30px;height:30px;border-bottom:2px solid rgba(150,50,255,0.5);border-right:2px solid rgba(150,50,255,0.5);border-radius:0 0 28px 0;}
+
+/* ══════════════════════════════════════════════
+   STATUS INDICATOR
+══════════════════════════════════════════════ */
+.status-pill{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:4px 12px;border-radius:20px;font-size:0.72rem;font-weight:600;
+  background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);color:#6ee7b7;
+  position:relative;z-index:2;margin-bottom:1rem;
+  animation:pillPulse 3s ease-in-out infinite;
+}
+.status-dot-anim{
+  width:7px;height:7px;background:#10b981;border-radius:50%;
+  box-shadow:0 0 8px #10b981;animation:dotBlink 1.5s ease-in-out infinite;
+}
+@keyframes dotBlink{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.6;transform:scale(0.85);}}
+@keyframes pillPulse{0%,100%{box-shadow:0 0 0 rgba(16,185,129,0);}50%{box-shadow:0 0 12px rgba(16,185,129,0.2);}}
+
+/* ══════════════════════════════════════════════
+   STAGGER IN
+══════════════════════════════════════════════ */
+.stagger-in{animation:staggerIn 0.6s cubic-bezier(0.16,1,0.3,1) both;}
+.s1{animation-delay:0.15s}
+.s2{animation-delay:0.25s}
+.s3{animation-delay:0.35s}
+.s4{animation-delay:0.45s}
+.s5{animation-delay:0.55s}
+@keyframes staggerIn{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+</style>
+
+<!-- ── BACKGROUND LAYERS ── -->
+<div id="avm-bg"></div>
+<canvas id="starfield"></canvas>
+<div id="aurora">
+  <div class="aurora-band a1"></div>
+  <div class="aurora-band a2"></div>
+  <div class="aurora-band a3"></div>
+  <div class="aurora-band a4"></div>
+</div>
+<div id="grid-overlay"></div>
+<div id="orbs">
+  <div class="orb orb1" id="orb1"></div>
+  <div class="orb orb2" id="orb2"></div>
+  <div class="orb orb3" id="orb3"></div>
+</div>
+<canvas id="particle-canvas"></canvas>
+
+<!-- ── MAIN AUTH SCENE ── -->
+<div class="auth-scene">
+  <div class="auth-card" id="authCard">
+    <!-- Holographic scan line -->
+    <div class="card-scanline"></div>
+    <!-- Corner brackets -->
+    <div class="corner-badge cb-tl"></div>
+    <div class="corner-badge cb-tr"></div>
+    <div class="corner-badge cb-bl"></div>
+    <div class="corner-badge cb-br"></div>
+
+    <!-- Logo & Heading -->
+    <div class="auth-logo">
+      <div class="status-pill stagger-in s1">
+        <div class="status-dot-anim"></div>
+        System Online
+      </div>
+      <div class="logo-ring-container stagger-in s1">
+        <div class="logo-ring"></div>
+        <div class="logo-ring-2"></div>
+        <div class="logo-icon-bg">
+          <svg width="38" height="38" viewBox="0 0 36 36" fill="none">
+            <defs>
+              <linearGradient id="lg-login" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#3b82f6"/>
+                <stop offset="50%" stop-color="#8b5cf6"/>
+                <stop offset="100%" stop-color="#06b6d4"/>
+              </linearGradient>
+            </defs>
+            <path d="M18 2 L32 10 L32 26 L18 34 L4 26 L4 10 Z" fill="url(#lg-login)" opacity="0.20"/>
+            <path d="M18 2 L32 10 L32 26 L18 34 L4 26 L4 10 Z" stroke="url(#lg-login)" stroke-width="1.5" fill="none"/>
+            <path d="M11 25 L18 11 L25 25" stroke="url(#lg-login)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            <path d="M13.5 20.5 L22.5 20.5" stroke="url(#lg-login)" stroke-width="1.8" stroke-linecap="round"/>
+            <circle cx="18" cy="11" r="1.8" fill="url(#lg-login)"/>
+          </svg>
+        </div>
+      </div>
+
+      <div class="auth-title stagger-in s2" id="authTitle">Welcome Back</div>
+      <div class="auth-sub stagger-in s2">Sign in to your <strong style="color:#93c5fd;">{{ panel_name }}</strong> account</div>
+    </div>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}{% for cat, msg in messages %}
+    <div class="auth-alert auth-alert-{{ cat }}"><i class="fas fa-info-circle"></i> {{ msg }}</div>
+    {% endfor %}{% endif %}
+    {% endwith %}
+
+    <!-- Form -->
+    <form method="POST" action="{{ url_for('login') }}">
+      <div class="f-group stagger-in s3">
+        <label class="f-label">Username or Email</label>
+        <div class="f-input-wrap">
+          <input type="text" name="username" id="usernameInput" class="f-input" placeholder="Enter username or email" required autofocus>
+          <i class="fas fa-user f-ico"></i>
+        </div>
+      </div>
+
+      <div class="f-group stagger-in s3">
+        <label class="f-label">Password</label>
+        <div class="f-input-wrap">
+          <input type="password" name="password" id="passwordInput" class="f-input" placeholder="Enter your password" required style="padding-right:3rem;">
+          <i class="fas fa-lock f-ico"></i>
+          <button type="button" class="pwd-toggle" id="pwdToggle" onclick="togglePwd()">
+            <i class="fas fa-eye" id="pwdEye"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="auth-row stagger-in s4">
+        <label class="custom-cb">
+          <input type="checkbox" name="remember">
+          <span>Remember me</span>
+        </label>
+        <a href="{{ url_for('forgot_password') }}" class="f-link">Forgot password?</a>
+      </div>
+
+      <button type="submit" class="btn-auth stagger-in s4" id="submitBtn">
+        <div class="btn-inner">
+          <i class="fas fa-sign-in-alt"></i>
+          <span>Sign In to {{ panel_name }}</span>
+        </div>
+      </button>
+    </form>
+
+    {% if get_setting('discord_auth_enabled', '0') == '1' or get_setting('google_auth_enabled', '0') == '1' %}
+    <div class="auth-divider stagger-in s5"><span>OR CONTINUE WITH</span></div>
+    {% if get_setting('google_auth_enabled', '0') == '1' %}
+    <a href="{{ url_for('google_login') }}" class="btn-google stagger-in s5">
+      <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+      Continue with Google
+    </a>
+    {% endif %}
+    {% if get_setting('discord_auth_enabled', '0') == '1' %}
+    <a href="{{ url_for('discord_login') }}" class="btn-discord stagger-in s5">
+      <svg width="18" height="18" viewBox="0 0 71 55" fill="none"><path d="M60.1045 4.8978C55.5792 2.8214 50.7265 1.2916 45.6527 0.41542C45.5603 0.39851 45.468 0.440769 45.4204 0.525289C44.7963 1.6353 44.105 3.0834 43.6209 4.2216C38.1637 3.4046 32.7345 3.4046 27.3892 4.2216C26.905 3.0581 26.1886 1.6353 25.5617 0.525289C25.5141 0.443589 25.4218 0.40133 25.3294 0.41542C20.2584 1.2888 15.4057 2.8186 10.8776 4.8978C10.8384 4.9147 10.8048 4.9429 10.7825 4.9795C1.57795 18.7309 -0.943561 32.1443 0.293408 45.3914C0.299005 45.4562 0.335386 45.5182 0.385761 45.5576C6.45866 50.0174 12.3413 52.7249 18.1147 54.5195C18.2071 54.5477 18.305 54.5139 18.3638 54.4378C19.7295 52.5728 20.9469 50.6063 21.9907 48.5383C22.0523 48.4172 21.9935 48.2735 21.8676 48.2256C19.9366 47.4931 18.0979 46.6 16.3292 45.5858C16.1893 45.5041 16.1781 45.304 16.3068 45.2082C16.679 44.9293 17.0513 44.6391 17.4067 44.3461C17.471 44.2926 17.5606 44.2813 17.6362 44.3151C29.2558 49.6202 41.8354 49.6202 53.3179 44.3151C53.3935 44.2785 53.4831 44.2898 53.5502 44.3433C53.9057 44.6363 54.2779 44.9293 54.6529 45.2082C54.7816 45.304 54.7732 45.5041 54.6333 45.5858C52.8646 46.6197 51.0259 47.4931 49.0921 48.2228C48.9662 48.2707 48.9102 48.4172 48.9718 48.5383C50.038 50.6034 51.2554 52.5699 52.5959 54.435C52.6519 54.5139 52.7526 54.5477 52.845 54.5195C58.6464 52.7249 64.529 50.0174 70.6019 45.5576C70.6551 45.5182 70.6887 45.459 70.6943 45.3942C72.1747 30.0791 68.2147 16.7757 60.1968 4.9823C60.1772 4.9429 60.1437 4.9147 60.1045 4.8978ZM23.7259 37.3253C20.2276 37.3253 17.3451 34.1136 17.3451 30.1693C17.3451 26.225 20.1717 23.0133 23.7259 23.0133C27.308 23.0133 30.1626 26.2532 30.1066 30.1693C30.1066 34.1136 27.28 37.3253 23.7259 37.3253ZM47.3178 37.3253C43.8196 37.3253 40.9371 34.1136 40.9371 30.1693C40.9371 26.225 43.7636 23.0133 47.3178 23.0133C50.9 23.0133 53.7545 26.2532 53.6986 30.1693C53.6986 34.1136 50.9 37.3253 47.3178 37.3253Z" fill="currentColor"/></svg>
+      {{ get_setting('discord_button_text', 'Continue with Discord') }}
+    </a>
+    {% endif %}
+    {% endif %}
+
+    {% if get_setting('registration_enabled', '1') == '1' %}
+    <div class="auth-footer stagger-in s5">
+      <p>Don't have an account? <a href="{{ url_for('register') }}">Create Account →</a></p>
+      <p style="margin-top:0.5rem;font-size:0.75rem;color:rgba(60,90,140,0.7);">🔒 Secure &amp; Encrypted &nbsp;•&nbsp; ⚡ Instant Access</p>
+    </div>
+    {% endif %}
+
+    <div class="brand-tag">{{ panel_name }} © QVM Panel 2026 &nbsp;|&nbsp; Version 1.0</div>
+  </div>
+</div>
+
+<script>
+/* ── STARFIELD ── */
+(function(){
+  const c = document.getElementById('starfield');
+  const ctx = c.getContext('2d');
+  let W, H, stars=[];
+  function resize(){W=c.width=innerWidth;H=c.height=innerHeight;}
+  function mkStars(){
+    stars=[];
+    for(let i=0;i<200;i++){
+      stars.push({
+        x:Math.random()*W, y:Math.random()*H,
+        r:Math.random()*1.5+0.2,
+        a:Math.random(),
+        speed:Math.random()*0.4+0.05,
+        twinkle:Math.random()*Math.PI*2
+      });
+    }
+  }
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    stars.forEach(s=>{
+      s.twinkle+=s.speed*0.04;
+      const alpha = s.a*(0.5+0.5*Math.sin(s.twinkle));
+      ctx.beginPath();
+      ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(180,210,255,${alpha})`;
+      ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  resize(); mkStars(); draw();
+  window.addEventListener('resize',()=>{resize();mkStars();});
+})();
+
+/* ── PARTICLE SYSTEM ── */
+(function(){
+  const c = document.getElementById('particle-canvas');
+  const ctx = c.getContext('2d');
+  let W, H, particles=[], mouse={x:null,y:null};
+  function resize(){W=c.width=innerWidth;H=c.height=innerHeight;}
+  class Particle{
+    constructor(){this.reset();}
+    reset(){
+      this.x=Math.random()*W; this.y=H+20;
+      this.vx=(Math.random()-0.5)*0.6; this.vy=-(Math.random()*1.2+0.3);
+      this.life=1; this.decay=Math.random()*0.003+0.001;
+      this.r=Math.random()*2+0.5;
+      const hues=['30,100,255','100,40,255','0,180,200','200,100,255'];
+      this.color=hues[Math.floor(Math.random()*hues.length)];
+    }
+    update(){
+      if(mouse.x!=null){
+        const dx=mouse.x-this.x, dy=mouse.y-this.y;
+        const dist=Math.sqrt(dx*dx+dy*dy);
+        if(dist<200){this.vx+=dx/dist*0.03; this.vy+=dy/dist*0.03;}
+      }
+      this.x+=this.vx; this.y+=this.vy;
+      this.life-=this.decay;
+      if(this.life<=0||this.y<-20) this.reset();
+    }
+    draw(){
+      ctx.beginPath();
+      ctx.arc(this.x,this.y,this.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(${this.color},${this.life*0.7})`;
+      ctx.shadowBlur=8; ctx.shadowColor=`rgba(${this.color},0.5)`;
+      ctx.fill();
+      ctx.shadowBlur=0;
+    }
+  }
+  for(let i=0;i<120;i++) particles.push(new Particle());
+  function loop(){
+    ctx.clearRect(0,0,W,H);
+    particles.forEach(p=>{p.update();p.draw();});
+    requestAnimationFrame(loop);
+  }
+  resize(); loop();
+  window.addEventListener('resize',resize);
+  window.addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY;});
+})();
+
+/* ── MOUSE PARALLAX ORBS ── */
+(function(){
+  const o1=document.getElementById('orb1');
+  const o2=document.getElementById('orb2');
+  const o3=document.getElementById('orb3');
+  let mx=0,my=0,cx=0,cy=0;
+  window.addEventListener('mousemove',e=>{mx=e.clientX/innerWidth;my=e.clientY/innerHeight;});
+  function lerp(a,b,t){return a+(b-a)*t;}
+  function animate(){
+    cx=lerp(cx,mx,0.05); cy=lerp(cy,my,0.05);
+    const dx=(cx-0.5)*60, dy=(cy-0.5)*60;
+    o1.style.transform=`translate(${dx}px, ${dy}px)`;
+    o2.style.transform=`translate(${-dx}px, ${-dy}px)`;
+    o3.style.transform=`translate(calc(-50% + ${dx*0.5}px), calc(-50% + ${dy*0.5}px))`;
+    requestAnimationFrame(animate);
+  }
+  animate();
+})();
+
+/* ── CARD TILT ── */
+(function(){
+  const card=document.getElementById('authCard');
+  if(!card) return;
+  card.addEventListener('mousemove',e=>{
+    const r=card.getBoundingClientRect();
+    const x=(e.clientX-r.left)/r.width-0.5;
+    const y=(e.clientY-r.top)/r.height-0.5;
+    card.style.transform=`perspective(1000px) rotateY(${x*8}deg) rotateX(${-y*8}deg) scale(1.01)`;
+    card.style.transition='transform 0.1s ease';
+  });
+  card.addEventListener('mouseleave',()=>{
+    card.style.transform='perspective(1000px) rotateY(0) rotateX(0) scale(1)';
+    card.style.transition='transform 0.5s ease';
+  });
+})();
+
+/* ── TYPING TITLE ── */
+(function(){
+  const el=document.getElementById('authTitle');
+  if(!el) return;
+  const texts=['Welcome Back', 'Hello, Commander', 'Access {{ panel_name }}'];
+  let ti=0, ci=0, typing=true, wait=0;
+  el.textContent='';
+  el.innerHTML='<span id="typed-text"></span><span class="type-cursor"></span>';
+  const typed=document.getElementById('typed-text');
+  function tick(){
+    if(wait>0){wait--;setTimeout(tick,50);return;}
+    if(typing){
+      ci++;
+      typed.textContent=texts[ti].slice(0,ci);
+      if(ci>=texts[ti].length){typing=false;wait=50;}
+      setTimeout(tick,80);
+    } else {
+      ci--;
+      typed.textContent=texts[ti].slice(0,ci);
+      if(ci<=0){typing=true;ti=(ti+1)%texts.length;wait=8;}
+      setTimeout(tick,40);
+    }
+  }
+  setTimeout(tick,1200);
+})();
+
+/* ── PASSWORD TOGGLE ── */
+function togglePwd(){
+  const inp=document.getElementById('passwordInput');
+  const eye=document.getElementById('pwdEye');
+  if(inp.type==='password'){inp.type='text';eye.classList.replace('fa-eye','fa-eye-slash');}
+  else{inp.type='password';eye.classList.replace('fa-eye-slash','fa-eye');}
+}
+
+/* ── SUBMIT LOADING ── */
+document.querySelector('form').addEventListener('submit',function(){
+  const btn=document.getElementById('submitBtn');
+  btn.style.opacity='0.8';
+  btn.querySelector('.btn-inner').innerHTML='<i class="fas fa-spinner fa-spin"></i><span>Authenticating...</span>';
+});
+</script>
+{% endblock %}

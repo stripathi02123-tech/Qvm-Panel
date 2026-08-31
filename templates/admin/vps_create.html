@@ -1,0 +1,440 @@
+{% extends "base.html" %}
+
+{% block title %}Create New VPS - {{ panel_name }}{% endblock %}
+
+{% block header_title %}Create New VPS{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumb">
+    <a href="{{ url_for('dashboard') }}" class="breadcrumb-item">Dashboard</a>
+    <span class="breadcrumb-separator"><i class="fas fa-chevron-right"></i></span>
+    <a href="{{ url_for('admin_dashboard') }}" class="breadcrumb-item">Admin</a>
+    <span class="breadcrumb-separator"><i class="fas fa-chevron-right"></i></span>
+    <a href="{{ url_for('admin_vps') }}" class="breadcrumb-item">VPS</a>
+    <span class="breadcrumb-separator"><i class="fas fa-chevron-right"></i></span>
+    <span class="breadcrumb-item active">Create</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Deploy Progress Overlay -->
+<div id="deployOverlay" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(2,4,8,0.96); backdrop-filter:blur(12px); display:none; align-items:center; justify-content:center;">
+    <div style="width:680px; max-width:95vw; background:#0c1018; border:1px solid rgba(59,130,246,0.25); border-radius:16px; overflow:hidden; box-shadow:0 0 80px rgba(59,130,246,0.15);">
+        <!-- Header -->
+        <div style="padding:1.25rem 1.5rem; border-bottom:1px solid rgba(59,130,246,0.15); display:flex; align-items:center; gap:0.75rem;">
+            <div id="deployHeaderIcon" style="width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg,#3b82f6,#6366f1); display:flex; align-items:center; justify-content:center;">
+                <i class="fas fa-rocket" style="color:#fff; font-size:1rem;"></i>
+            </div>
+            <div>
+                <div style="font-weight:700; font-size:1rem; color:#e1e9f0;">AVM VPS Deployer</div>
+                <div id="deploySubtext" style="font-size:0.75rem; color:rgba(160,190,240,0.6);">Initializing deployment…</div>
+            </div>
+            <div id="deployProgressPercent" style="margin-left:auto; font-size:1.5rem; font-weight:800; color:#3b82f6; font-family:monospace;">0%</div>
+        </div>
+        <!-- Progress Bar -->
+        <div style="height:4px; background:#141820;">
+            <div id="deployProgressBar" style="height:100%; width:0%; background:linear-gradient(90deg,#3b82f6,#6366f1,#8b5cf6); transition:width 0.4s ease; border-radius:0 2px 2px 0;"></div>
+        </div>
+        <!-- Terminal Log -->
+        <div id="deployLog" style="padding:1rem 1.5rem; height:380px; overflow-y:auto; font-family:'JetBrains Mono','Fira Code','SF Mono',monospace; font-size:0.8rem; line-height:1.9; background:#080b10;">
+            <div style="color:rgba(59,130,246,0.6); margin-bottom:0.5rem;">$ avm deploy --interactive</div>
+        </div>
+        <!-- Footer -->
+        <div id="deployFooter" style="display:none; padding:1rem 1.5rem; border-top:1px solid rgba(59,130,246,0.15); background:#0e1218;">
+            <div id="deployResultBox"></div>
+        </div>
+    </div>
+</div>
+
+<style>
+@keyframes deployPulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
+.deploy-spin{animation:deployPulse 1s ease-in-out infinite;}
+@keyframes typeIn{from{opacity:0;transform:translateX(-6px);}to{opacity:1;transform:translateX(0);}}
+.deploy-line{animation:typeIn 0.3s ease forwards;}
+</style>
+
+<!-- Form Card -->
+<div class="card" id="vpsFormCard">
+    <div class="card-header">
+        <h3 class="card-title">
+            <i class="fas fa-plus-circle"></i>
+            New Virtual Private Server
+        </h3>
+    </div>
+
+    <form id="createVPSForm">
+        <div class="grid grid-2">
+            <div class="form-group">
+                <label class="form-label">Owner <span style="color: var(--accent-danger);">*</span></label>
+                <select id="user_id" class="form-control" required>
+                    <option value="">Select user...</option>
+                    {% for user in users %}
+                    <option value="{{ user.id }}" {% if request.args.user_id == user.id|string %}selected{% endif %}>
+                        {{ user.username }} ({{ user.email }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Node <span style="color: var(--accent-danger);">*</span></label>
+                <select id="node_id" class="form-control" required>
+                    <option value="">Select node...</option>
+                    {% for node in nodes %}
+                    <option value="{{ node.id }}">
+                        {{ node.name }} ({{ node.location }}) - {{ node.used_vps }}/{{ node.total_vps }} VPS
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Hostname</label>
+                <input type="text" id="hostname" class="form-control" placeholder="e.g., my-vps-01">
+                <small style="color: var(--text-muted);">Leave blank for auto-generated name</small>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Operating System <span style="color: var(--accent-danger);">*</span></label>
+                <select id="os_version" class="form-control" required>
+                    {% for os in os_options %}
+                    <option value="{{ os.value }}" {% if loop.index == 1 %}selected{% endif %}>
+                        {{ os.label }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">CPU Cores <span style="color: var(--accent-danger);">*</span></label>
+                <input type="number" id="cpu" class="form-control" value="2" min="1" max="64" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">RAM (GB) <span style="color: var(--accent-danger);">*</span></label>
+                <input type="number" id="ram" class="form-control" value="2" min="1" max="128" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Disk (GB) <span style="color: var(--accent-danger);">*</span></label>
+                <input type="number" id="disk" class="form-control" value="20" min="5" max="2000" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">IP Address</label>
+                <input type="text" id="ip_address" class="form-control" placeholder="e.g., 10.0.0.100">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">IP Alias (Display)</label>
+                <input type="text" id="ip_alias" class="form-control" placeholder="e.g., vps1.example.com">
+            </div>
+        </div>
+
+        <!-- Virtualization Settings -->
+        <div style="margin: 1.5rem 0; padding: 1rem; background-color: var(--bg-secondary); border-radius: var(--border-radius-sm); border: 1px solid rgba(139,92,246,0.25);">
+            <h4 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; color: #8b5cf6;">
+                <i class="fas fa-microchip"></i>
+                Virtualization Options
+            </h4>
+            <div class="grid grid-2">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input type="checkbox" id="virt_kvm" style="width: auto; margin: 0; accent-color: #8b5cf6;">
+                        <i class="fas fa-server" style="color: #8b5cf6;"></i>
+                        Enable KVM Virtualization
+                    </label>
+                    <small style="color: var(--text-muted); display: block; margin-top: 0.4rem;">
+                        Enables nested virtualization (KVM). Required for running VMs inside the container (e.g., QEMU, Proxmox). Grants privileged access and mounts /dev/kvm.
+                    </small>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input type="checkbox" id="virt_docker" style="width: auto; margin: 0; accent-color: #0ea5e9;">
+                        <i class="fab fa-docker" style="color: #0ea5e9;"></i>
+                        Enable Docker Support
+                    </label>
+                    <small style="color: var(--text-muted); display: block; margin-top: 0.4rem;">
+                        Enables Docker-in-LXC support. Sets AppArmor to unconfined, enables nesting, cgroup access, and shmounts for running Docker containers.
+                    </small>
+                </div>
+            </div>
+            <div id="virt-warning" style="display: none; margin-top: 0.75rem; padding: 0.6rem; background: rgba(234,179,8,0.1); border: 1px solid rgba(234,179,8,0.3); border-radius: var(--border-radius-sm);">
+                <small style="color: #eab308;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Warning:</strong> Both KVM and Docker require privileged access and disable some security features. Use only when you need nested virtualization or container-in-container capabilities.
+                </small>
+            </div>
+        </div>
+
+        <!-- Auto-Backup Settings -->
+        <div style="margin: 1.5rem 0; padding: 1rem; background-color: var(--bg-secondary); border-radius: var(--border-radius-sm); border: 1px solid rgba(16,185,129,0.25);">
+            <h4 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; color: var(--accent-success);">
+                <i class="fas fa-history"></i>
+                Auto-Backup Settings
+            </h4>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                    <input type="checkbox" id="auto_backup_enabled" style="width: auto; margin: 0; accent-color: var(--accent-success);">
+                    Enable Auto-Backup (LXC Snapshot every 5 minutes)
+                </label>
+                <small style="color: var(--text-muted); display: block; margin-top: 0.4rem;">
+                    When enabled, an LXC snapshot is automatically taken every 5 minutes. Runs in a background thread — zero panel lag.
+                </small>
+            </div>
+        </div>
+
+        <!-- Auto-Expiration Settings -->
+        <div style="margin: 1.5rem 0; padding: 1rem; background-color: var(--bg-secondary); border-radius: var(--border-radius-sm); border: 1px solid var(--border-color);">
+            <h4 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fas fa-clock"></i>
+                Auto-Expiration Settings
+            </h4>
+            <div class="form-group">
+                <label class="form-label" style="display: flex; align-items: center; gap: 0.5rem;">
+                    <input type="checkbox" id="auto_suspend_enabled" style="width: auto; margin: 0;">
+                    Enable Auto-Suspend on Expiration
+                </label>
+                <small style="color: var(--text-muted); display: block; margin-top: 0.25rem;">
+                    When enabled, VPS will automatically suspend after the specified number of days
+                </small>
+            </div>
+            <div id="expiration-settings" style="display: none; margin-top: 1rem;">
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label">Expiration Days</label>
+                        <input type="number" id="expiration_days" class="form-control" value="30" min="1" max="365">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Expiration Date (Preview)</label>
+                        <input type="text" id="expiration_preview" class="form-control" readonly style="background-color: var(--bg-tertiary);">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resource Summary -->
+        <div style="margin: 1.5rem 0; padding: 1rem; background-color: var(--bg-tertiary); border-radius: var(--border-radius-sm);">
+            <h4 style="margin-bottom: 1rem;">Resource Summary</h4>
+            <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
+                <div>
+                    <span style="color: var(--text-muted);">Total CPU:</span>
+                    <span id="summary-cpu">2 cores</span>
+                </div>
+                <div>
+                    <span style="color: var(--text-muted);">Total RAM:</span>
+                    <span id="summary-ram">2 GB</span>
+                </div>
+                <div>
+                    <span style="color: var(--text-muted);">Total Storage:</span>
+                    <span id="summary-disk">20 GB</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+            <a href="{{ url_for('admin_vps') }}" class="btn btn-outline">Cancel</a>
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Create VPS
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function(){
+    // ── Resource summary ──
+    document.getElementById('cpu').addEventListener('input', e => document.getElementById('summary-cpu').textContent = e.target.value + ' cores');
+    document.getElementById('ram').addEventListener('input', e => document.getElementById('summary-ram').textContent = e.target.value + ' GB');
+    document.getElementById('disk').addEventListener('input', e => document.getElementById('summary-disk').textContent = e.target.value + ' GB');
+
+    // ── Virtualization warning ──
+    function updateVirtWarning() {
+        const kvm = document.getElementById('virt_kvm').checked;
+        const docker = document.getElementById('virt_docker').checked;
+        document.getElementById('virt-warning').style.display = (kvm || docker) ? 'block' : 'none';
+    }
+    document.getElementById('virt_kvm').addEventListener('change', updateVirtWarning);
+    document.getElementById('virt_docker').addEventListener('change', updateVirtWarning);
+
+    // ── Expiration ──
+    document.getElementById('auto_suspend_enabled').addEventListener('change', function(e) {
+        document.getElementById('expiration-settings').style.display = e.target.checked ? 'block' : 'none';
+        if (e.target.checked) updateExpirationPreview();
+    });
+    function updateExpirationPreview() {
+        const days = parseInt(document.getElementById('expiration_days').value) || 30;
+        const d = new Date(Date.now() + days * 86400000);
+        document.getElementById('expiration_preview').value = d.toLocaleString('en-US', { year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }) + ` (${days} days from now)`;
+    }
+    document.getElementById('expiration_days').addEventListener('input', updateExpirationPreview);
+
+    // ── Deploy Progress Overlay ──
+    const overlay = document.getElementById('deployOverlay');
+    const logBox  = document.getElementById('deployLog');
+    const bar     = document.getElementById('deployProgressBar');
+    const pctEl   = document.getElementById('deployProgressPercent');
+    const subtext = document.getElementById('deploySubtext');
+    const footer  = document.getElementById('deployFooter');
+    const resBox  = document.getElementById('deployResultBox');
+
+    let stepCount = 0, currentStep = 0;
+    const TS = () => new Date().toLocaleTimeString('en-US', {hour12:false});
+
+    function showOverlay() {
+        overlay.style.display = 'flex';
+        logBox.innerHTML = '<div style="color:rgba(59,130,246,0.6);margin-bottom:0.5rem;">$ avm deploy --interactive</div>';
+        bar.style.width = '0%'; pctEl.textContent = '0%'; stepCount = 0; currentStep = 0;
+        footer.style.display = 'none';
+        subtext.textContent = 'Initializing deployment…';
+    }
+
+    function appendLine(msg, color, icon) {
+        const c = logBox;
+        const line = document.createElement('div');
+        line.className = 'deploy-line';
+        line.style.color = color || '#a0bef0';
+        line.innerHTML = '<span style="color:rgba(100,130,180,0.4);margin-right:0.5rem;">[' + TS() + ']</span> ' + (icon||'▸') + ' ' + msg;
+        c.appendChild(line);
+        c.scrollTop = c.scrollHeight;
+    }
+
+    function updateProgress(step, total, msg) {
+        currentStep = step;
+        stepCount = total || stepCount;
+        const pct = stepCount > 0 ? Math.round((step / stepCount) * 100) : 0;
+        bar.style.width = pct + '%';
+        pctEl.textContent = pct + '%';
+        subtext.textContent = msg;
+        if (pct >= 100) { pctEl.style.color = '#10b981'; bar.style.background = 'linear-gradient(90deg,#10b981,#34d399)'; }
+    }
+
+    // ── Socket.IO listener ──
+    function connectDeploy() {
+        if (typeof io === 'undefined') return null;
+        const s = io();
+        s.on('connect', () => s.emit('join_deploy_room'));
+        s.on('deploy_progress', d => {
+            if (d.status === 'running') {
+                appendLine(d.message, '#60a5fa', '⟳');
+            } else if (d.status === 'step_done') {
+                appendLine(d.message, '#34d399', '✔');
+            } else if (d.status === 'completed') {
+                appendLine('', '#10b981');
+                appendLine('═══════════════════════════════════════════════', '#10b981', '');
+                appendLine('  VPS INSTALLATION COMPLETED SUCCESSFULLY', '#34d399', '🎉');
+                appendLine('═══════════════════════════════════════════════', '#10b981', '');
+                appendLine('', '#10b981');
+                showFooter(d);
+            }
+            if (d.step && d.total) updateProgress(d.step, d.total, d.message);
+        });
+        return s;
+    }
+
+    function showFooter(data) {
+        footer.style.display = 'block';
+        // Retrieve password from the fetch result (stored globally)
+        const pw = window._deployRootPw || 'root';
+        const ip = document.getElementById('ip_address').value || 'YOUR_SERVER_IP';
+        resBox.innerHTML = `
+            <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:0.75rem;">
+                <div style="width:32px;height:32px;border-radius:8px;background:rgba(16,185,129,0.15);display:flex;align-items:center;justify-content:center;">
+                    <i class="fas fa-key" style="color:#10b981;"></i>
+                </div>
+                <div>
+                    <div style="font-weight:700; color:#e1e9f0;">SSH Login Credentials</div>
+                    <div style="font-size:0.75rem; color:rgba(160,190,240,0.5);">Root password login enabled — save these credentials</div>
+                </div>
+            </div>
+            <div style="background:#080b10; border:1px solid rgba(16,185,129,0.2); border-radius:10px; padding:0.85rem 1rem; font-family:'JetBrains Mono','Fira Code',monospace; font-size:0.8rem; line-height:1.8;">
+                <div><span style="color:rgba(100,130,180,0.5);">HOST</span>  <span style="color:#a0bef0;">${ip}</span></div>
+                <div><span style="color:rgba(100,130,180,0.5);">USER</span>  <span style="color:#a0bef0;">root</span></div>
+                <div><span style="color:rgba(100,130,180,0.5);">PASS</span>  <span style="color:#f59e0b;font-weight:700;" id="pwDisplay">${pw}</span>
+                    <button onclick="navigator.clipboard.writeText('${pw}');this.innerHTML='✓';setTimeout(()=>this.innerHTML='📋',1500)" style="margin-left:0.5rem;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:6px;padding:2px 8px;color:#f59e0b;cursor:pointer;font-size:0.7rem;">📋</button>
+                </div>
+                <div style="margin-top:0.5rem;color:rgba(100,130,180,0.5);">SSH</div>
+                <div style="color:#34d399; word-break:break-all;">ssh root@${ip}</div>
+            </div>
+            <div style="margin-top:0.75rem; display:flex; gap:0.75rem; justify-content:flex-end;">
+                <button onclick="copyToClipboard('pwDisplay')" class="btn btn-outline" style="font-size:0.8rem;"><i class="fas fa-copy"></i> Copy Password</button>
+                <a href="{{ url_for('admin_vps') }}" class="btn btn-primary" style="font-size:0.8rem;"><i class="fas fa-list"></i> View All VPS</a>
+            </div>
+        `;
+    }
+
+    window.copyToClipboard = function(id) {
+        const t = document.getElementById(id);
+        if (t) { navigator.clipboard.writeText(t.textContent || t.value); showToast('Copied!', 'success'); }
+    };
+
+    // ── Form submit ──
+    document.getElementById('createVPSForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const payload = {
+            user_id: parseInt(document.getElementById('user_id').value),
+            node_id: parseInt(document.getElementById('node_id').value),
+            hostname: document.getElementById('hostname').value,
+            os_version: document.getElementById('os_version').value,
+            cpu: parseInt(document.getElementById('cpu').value),
+            ram: parseInt(document.getElementById('ram').value),
+            disk: parseInt(document.getElementById('disk').value),
+            ip_address: document.getElementById('ip_address').value || null,
+            ip_alias: document.getElementById('ip_alias').value || null,
+            auto_suspend_enabled: document.getElementById('auto_suspend_enabled').checked,
+            expiration_days: document.getElementById('auto_suspend_enabled').checked ? parseInt(document.getElementById('expiration_days').value) : 0,
+            auto_backup_enabled: document.getElementById('auto_backup_enabled').checked,
+            virt_kvm: document.getElementById('virt_kvm').checked,
+            virt_docker: document.getElementById('virt_docker').checked
+        };
+
+        if (!payload.user_id || !payload.node_id || !payload.os_version) {
+            showToast('Please fill in all required fields', 'warning');
+            return;
+        }
+
+        showOverlay();
+        const sock = connectDeploy();
+
+        appendLine('Deploying VPS on node…', '#60a5fa', '🚀');
+        appendLine(`OS: ${payload.os_version} | CPU: ${payload.cpu} | RAM: ${payload.ram}GB | Disk: ${payload.disk}GB`, '#a0bef0', '📋');
+        if (payload.virt_kvm) appendLine('KVM Virtualization: ENABLED', '#c084fc', '🖥️');
+        if (payload.virt_docker) appendLine('Docker Support: ENABLED', '#38bdf8', '🐳');
+        appendLine('', '#333');
+
+        try {
+            const resp = await fetch('/admin/vps/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await resp.json();
+
+            if (result.success) {
+                window._deployRootPw = result.root_password;
+                appendLine(`Container: ${result.container_name}`, '#34d399', '📦');
+                appendLine(`VPS ID: #${result.vps_id}`, '#34d399', '🔢');
+                // If socket didn't fire completed (e.g. fast deploy), force footer
+                setTimeout(() => {
+                    if (footer.style.display === 'none') showFooter({});
+                }, 1500);
+            } else {
+                appendLine('DEPLOYMENT FAILED: ' + (result.error || 'Unknown error'), '#ef4444', '✖');
+                footer.style.display = 'block';
+                resBox.innerHTML = `<div style="color:#ef4444;text-align:center;padding:1rem;"><i class="fas fa-exclamation-triangle" style="font-size:1.5rem;margin-bottom:0.5rem;display:block;"></i>Deployment failed.<br><small>${result.error||''}</small></div>`;
+                bar.style.background = 'linear-gradient(90deg,#ef4444,#f87171)';
+            }
+        } catch(err) {
+            appendLine('NETWORK ERROR: ' + err.message, '#ef4444', '✖');
+            footer.style.display = 'block';
+            resBox.innerHTML = `<div style="color:#ef4444;text-align:center;padding:1rem;">Network error: ${err.message}</div>`;
+            bar.style.background = 'linear-gradient(90deg,#ef4444,#f87171)';
+        }
+    });
+})();
+</script>
+{% endblock %}
