@@ -1,0 +1,29 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/index.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "api/index.py"
+    }
+  ],
+  "env": {
+    "MONGODB_URI": "mongodb+srv://risalnrisal6_db_user:RnqZ8KY0cmpqAdwX@cluster0.ayj0mp0.mongodb.net/?appName=Cluster0",
+    "MONGODB_DB": "qvm_panel",
+    "PANEL_NAME": "QVM Panel",
+    "PANEL_VERSION": "1.0",
+    "PANEL_DEVELOPER": "QVM Panel",
+    "HOST": "0.0.0.0",
+    "PORT": "5000",
+    "MAIN_ADMIN_USERNAME": "admin",
+    "MAIN_ADMIN_PASSWORD": "admin",
+    "MAIN_ADMIN_EMAIL": "admin@qvmpanel.com",
+    "DEFAULT_STORAGE_POOL": "default",
+    "DEBUG_MODE": "false"
+  }
+}
